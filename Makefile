@@ -1,4 +1,4 @@
-.PHONY: help build up down logs shell test lint format migrate superuser clean
+.PHONY: help build up down logs shell test test-engine lint format migrate superuser clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -21,6 +21,10 @@ shell:  ## Open a shell inside the web container
 
 test:  ## Run the test suite with coverage
 	docker compose run --rm web pytest
+
+test-engine:  ## Run the analytics engine tests at their 100% gate
+	docker compose run --rm web pytest tests/analytics -o addopts="" \
+		--cov=apps/analytics/engine --cov-report=term-missing --cov-fail-under=100
 
 lint:  ## Check formatting and lint rules
 	docker compose run --rm web ruff check .

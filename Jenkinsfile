@@ -51,6 +51,23 @@ pipeline {
                 sh 'docker compose run --rm web pytest'
             }
         }
+
+        stage('Engine coverage') {
+            steps {
+                // The analytics engine is held to 100%, not the project-wide
+                // floor: it is pure and fast to test, and an untested branch
+                // in it produces a plausible wrong number rather than a
+                // crash. CLAUDE.md states the rule; this stage enforces it.
+                // -o addopts="" clears the project-wide --cov=. from pyproject,
+                // which would otherwise be added to this one rather than
+                // replaced, and drag the measurement back to the whole repo.
+                sh '''docker compose run --rm web pytest tests/analytics \
+                        -o addopts="" \
+                        --cov=apps/analytics/engine \
+                        --cov-report=term-missing \
+                        --cov-fail-under=100'''
+            }
+        }
     }
 
     post {

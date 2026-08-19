@@ -496,3 +496,76 @@ a {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---------- Dashboard ---------- */
+
+.question {
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.question__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.question__head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.question__meta {
+  margin: 0.25rem 0 var(--space-2);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.question__empty {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Fixed height so the canvas has something to fill: Chart.js needs a sized
+   parent, and a bare canvas collapses to nothing. */
+.chart {
+  position: relative;
+  height: 260px;
+  margin-bottom: var(--space-2);
+}
+
+.stat-row--compact .stat {
+  flex: 1 1 6rem;
+  padding: var(--space-1) var(--space-2);
+}
+
+.stat-row--compact .stat__value {
+  font-size: 1.3rem;
+}
+
+/* A finding the reader should not have to look for — an unusually skipped
+   question, or a mean the median disagrees with. */
+.callout {
+  padding: var(--space-2);
+  margin: 0 0 var(--space-3);
+  border-left: 3px solid var(--mint-deep);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.92rem;
+}
+
+.callout--quiet {
+  border-left-color: var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tag--categorical {
+  border-color: var(--muted);
+}

@@ -70,7 +70,7 @@ normalized responses, and re-uploading bumps the version instead of overwriting.
 
 ---
 
-## ⬜ M3 — Descriptive layer
+## ✅ M3 — Descriptive layer
 
 `feat(analytics): add descriptive analysis and dashboard`
 

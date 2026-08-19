@@ -20,6 +20,19 @@ def test_api_requires_authentication_by_default() -> None:
     )
 
 
+def test_api_accepts_both_tokens_and_sessions() -> None:
+    """JWT for API clients, sessions for the server-rendered pages.
+
+    JWT is listed first so an unauthenticated call answers 401 with a
+    challenge header rather than a bare 403 — the order is the behaviour,
+    not a formatting detail.
+    """
+    classes = settings.REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]
+
+    assert classes[0].endswith("JWTAuthentication")
+    assert any(c.endswith("SessionAuthentication") for c in classes)
+
+
 def test_list_endpoints_are_paginated() -> None:
     """Without a default page size, one large dataset can exhaust memory."""
     assert settings.REST_FRAMEWORK["PAGE_SIZE"] > 0
