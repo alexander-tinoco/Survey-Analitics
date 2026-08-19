@@ -14,6 +14,7 @@
       <h1>What the answers say</h1>
       <p class="lede">Descriptive analysis of {{ dataset.source_filename }}</p>
     </div>
+    <a class="btn" href="{% url 'analytics:relational' dataset.pk %}">Find relationships</a>
   </div>
 
   <ul class="stat-row">

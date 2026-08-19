@@ -9,6 +9,7 @@ from django.views.generic import DetailView
 from apps.surveys.models import Dataset
 
 from .presenters import summary_to_dict
+from .services import relational
 from .services.descriptive import describe
 
 
@@ -32,4 +33,26 @@ class DescriptiveDashboardView(LoginRequiredMixin, DetailView):
         # Serialized into the page rather than fetched over a second request:
         # the data is already computed, and a fetch would only add a spinner.
         context["chart_data"] = summary_to_dict(summary)
+        return context
+
+
+class RelationalDashboardView(LoginRequiredMixin, DetailView):
+    """Show the relational analysis, queueing it if it has not run yet."""
+
+    model = Dataset
+    template_name = "analytics/relational.html"
+    context_object_name = "dataset"
+
+    def get_queryset(self) -> QuerySet:
+        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        # Requesting rather than reading: a first visit should start the work
+        # instead of showing an empty page with no explanation.
+        report = relational.request_analysis(self.object)
+
+        context["report"] = report
+        context["associations"] = [relational.association_to_dict(a) for a in report.associations]
+        context["significant_count"] = len(report.significant)
         return context

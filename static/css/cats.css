@@ -569,3 +569,33 @@ a {
 .tag--categorical {
   border-color: var(--muted);
 }
+
+/* ---------- Relational analysis ---------- */
+
+.association {
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.association .question__head h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* The percentage sits under its count rather than beside it: the counts form
+   a column the eye can scan, and interleaving two numbers per cell destroys
+   that alignment. */
+.cell-share {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.callout--warn {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}

@@ -1,4 +1,4 @@
-.PHONY: help build up down logs shell test test-engine lint format migrate superuser clean
+.PHONY: help build up down logs worker-logs shell test test-engine lint format migrate superuser clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -15,6 +15,9 @@ down:  ## Stop the stack and remove containers
 
 logs:  ## Tail the web service logs
 	docker compose logs -f web
+
+worker-logs:  ## Tail the Celery worker logs
+	docker compose logs -f worker
 
 shell:  ## Open a shell inside the web container
 	docker compose run --rm web bash

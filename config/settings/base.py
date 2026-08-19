@@ -88,6 +88,9 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
+# Celery 6 stops honouring broker_connection_retry at startup. Set explicitly
+# so the worker keeps retrying while Redis comes up, instead of exiting.
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 AUTH_USER_MODEL = "accounts.User"
 

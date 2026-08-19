@@ -66,9 +66,7 @@ class TestFrameLoading:
             "strongly agree",
         ]
 
-    def test_a_dataset_without_ordinal_questions_needs_no_scales(
-        self, survey: object
-    ) -> None:
+    def test_a_dataset_without_ordinal_questions_needs_no_scales(self, survey: object) -> None:
         """Scale recovery is skipped entirely rather than scanning for
         nothing — most datasets have no ordinal column at all.
         """

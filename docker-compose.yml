@@ -42,5 +42,19 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    build: .
+    # Heavy analytics jobs run here so a request never blocks on them.
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:

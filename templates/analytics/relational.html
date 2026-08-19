@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Relationships — {{ dataset }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="crumb">
+        <a href="{% url 'surveys:list' %}">Surveys</a> /
+        <a href="{{ dataset.survey.get_absolute_url }}">{{ dataset.survey.name }}</a> /
+        <a href="{{ dataset.get_absolute_url }}">v{{ dataset.version }}</a>
+      </p>
+      <h1>What goes with what</h1>
+      <p class="lede">Which answers travel together, and which pairings are just noise.</p>
+    </div>
+    <a class="btn btn--ghost" href="{% url 'analytics:dashboard' dataset.pk %}">Distributions</a>
+  </div>
+
+  {% if not report.is_ready %}
+    {# Processing state. Cross-tabulating every pair is quadratic in the
+       number of questions, so this runs on a worker and the page polls. #}
+    <section class="cat-panel" data-poll-url="{% url 'analytics_api:relational' dataset.pk %}">
+      <img class="cat-panel__art" src="{% static 'img/cat401.png' %}"
+           alt="A cat working through the numbers">
+      <h2>Crunching the numbers</h2>
+      <p>
+        Comparing every pair of questions in this dataset. This page updates
+        itself when the results land.
+      </p>
+      <p class="cat-panel__hint" role="status" aria-live="polite">Working…</p>
+    </section>
+    <script src="{% static 'js/poll.js' %}"></script>
+
+  {% elif not associations %}
+    <section class="cat-panel">
+      <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+           alt="A cat finding nothing to report">
+      <h2>Nothing to cross-tabulate</h2>
+      <p>
+        This dataset needs at least two categorical or ordinal questions.
+        Numeric and free-text answers have no categories to compare.
+      </p>
+    </section>
+
+  {% else %}
+    <p class="callout">
+      <strong>{{ significant_count }}</strong> of {{ associations|length }} question
+      pairs show a relationship stronger than chance.
+      {% if significant_count %}
+        They are listed first.
+      {% else %}
+        None reached significance after correcting for the number of comparisons —
+        with this many pairs, some would look meaningful by chance alone.
+      {% endif %}
+    </p>
+
+    {% for association in associations %}
+      <section class="association">
+        <header class="question__head">
+          <h2>{{ association.row_question }} × {{ association.column_question }}</h2>
+          <span class="tag {% if association.is_significant %}tag--ordinal{% endif %}">
+            {{ association.strength }}
+          </span>
+        </header>
+
+        <p class="question__meta">
+          <span class="numeric">{{ association.respondents }}</span> respondents answered both ·
+          χ² = <span class="numeric">{{ association.chi_square }}</span>
+          (df <span class="numeric">{{ association.degrees_of_freedom }}</span>) ·
+          Cramér's V = <span class="numeric">{{ association.cramers_v }}</span> ·
+          adjusted p = <span class="numeric">{{ association.adjusted_p_value }}</span>
+        </p>
+
+        {% if not association.is_reliable %}
+          <p class="callout callout--warn">
+            Too few respondents in some combinations for this test to be
+            trustworthy. The table below is still accurate; the p-value is not.
+          </p>
+        {% endif %}
+
+        <table class="data-table">
+          <caption class="visually-hidden">
+            {{ association.row_question }} by {{ association.column_question }},
+            counts and row percentages
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">{{ association.row_question }}</th>
+              {% for label in association.table.column_labels %}
+                <th scope="col">{{ label }}</th>
+              {% endfor %}
+              <th scope="col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in association.table.rows %}
+              <tr>
+                <th scope="row" class="data-table__text">{{ row.label }}</th>
+                {% for cell in row.cells %}
+                  <td>
+                    {{ cell.count }}
+                    <span class="cell-share">{{ cell.percentage }}%</span>
+                  </td>
+                {% endfor %}
+                <td>{{ row.total }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="card__note">
+          Percentages are shares of each row, so rows can be compared even when
+          they contain different numbers of respondents.
+        </p>
+      </section>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

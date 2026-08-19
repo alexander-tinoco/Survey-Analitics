@@ -88,7 +88,7 @@ browser.
 
 ---
 
-## ⬜ M4 — Relational layer
+## ✅ M4 — Relational layer
 
 `feat(analytics): add relational analysis with async processing`
 
