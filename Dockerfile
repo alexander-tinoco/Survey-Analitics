@@ -25,6 +25,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Run as an unprivileged user: a container breakout should not land on root.
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
+# WORKDIR creates /app owned by root, and COPY --chown only sets ownership on
+# the files it copies — not on the directory holding them. The application
+# would then be unable to write anything beside its own source: ruff's cache,
+# pytest's cache, a coverage report. Local development hid this, because the
+# bind mount replaced /app with a directory the host user owns.
+RUN mkdir -p /app && chown app:app /app
 WORKDIR /app
 
 COPY --from=builder /wheels /wheels

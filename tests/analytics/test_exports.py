@@ -126,8 +126,8 @@ class TestGuards:
         from unittest.mock import patch
 
         survey = Survey.objects.create(owner=owner, name="Fresh survey")
-        rows = "A,B\nx,y\n" * 30
-        dataset = ingest(survey, parse_upload(("A,B\n" + "x,y\n" * 30).encode(), "f.csv"))
+        rows = ("A,B\n" + "x,y\n" * 30).encode()
+        dataset = ingest(survey, parse_upload(rows, "f.csv"))
 
         with (
             patch("apps.analytics.tasks.compute_relational_analysis.delay"),
