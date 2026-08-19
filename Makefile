@@ -1,4 +1,4 @@
-.PHONY: help build up down logs worker-logs worker-reload shell test test-engine lint format migrate superuser clean
+.PHONY: help build up down logs worker-logs worker-reload shell test test-engine lint format migrate superuser ci-up ci-down ci-logs clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -47,6 +47,16 @@ migrate:  ## Apply database migrations
 
 superuser:  ## Create an admin user
 	docker compose run --rm web python manage.py createsuperuser
+
+ci-up:  ## Start the local Jenkins server
+	docker compose --profile ci up -d jenkins
+	@echo "Jenkins starting at http://localhost:$${JENKINS_PORT:-8080} — see docs/CI.md"
+
+ci-down:  ## Stop the local Jenkins server
+	docker compose --profile ci stop jenkins
+
+ci-logs:  ## Tail the Jenkins logs
+	docker compose --profile ci logs -f jenkins
 
 clean:  ## Stop the stack and delete volumes (destroys the database)
 	docker compose down -v

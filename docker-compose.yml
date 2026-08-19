@@ -56,5 +56,39 @@ services:
       redis:
         condition: service_healthy
 
+  # Opt-in: started only with `docker compose --profile ci up`, so the normal
+  # development stack does not pay for a CI server it is not using.
+  jenkins:
+    # Built rather than pulled: the official image has no docker client, and
+    # every pipeline stage shells out to docker compose.
+    build:
+      context: .
+      dockerfile: docker/jenkins/Dockerfile
+    profiles: ["ci"]
+    user: root
+    environment:
+      # runSetupWizard=false skips the setup wizard: the pipeline is defined by
+      # the Jenkinsfile in this repository, so there is nothing to configure
+      # through the UI.
+      #
+      # ALLOW_LOCAL_CHECKOUT lets the job build from /workspace, the read-only
+      # mount of this repository. Jenkins refuses local-path checkouts by
+      # default because on a shared server any job could then read any path the
+      # controller can. That reasoning does not apply to a single-user CI
+      # server on your own machine — but do not carry this flag to a shared one.
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # Jenkins builds this project with docker compose, so it needs the host
+      # daemon. This grants the container root-equivalent access to the host
+      # and is acceptable only for a local CI server you control.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace:ro
+
 volumes:
   postgres_data:
+  jenkins_home:
