@@ -701,3 +701,39 @@ a {
   border-color: var(--muted);
   color: var(--muted);
 }
+
+/* ---------- Destructive actions ---------- */
+
+/* Destructive controls are outlined rather than filled: they should be
+   findable without competing with the action a user actually came to take. */
+.btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn--danger:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--paper);
+}
+
+.link-danger {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+/* ---------- Pagination ---------- */
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pagination__status {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

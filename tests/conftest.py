@@ -9,6 +9,17 @@ from apps.surveys.models import Survey
 User = get_user_model()
 
 
+@pytest.fixture(autouse=True)
+def isolated_media(settings: object, tmp_path: object) -> None:
+    """Send uploads written during a test to a temporary directory.
+
+    Without this, every test that ingests a file leaves a real upload in the
+    working tree, and the suite slowly fills the repository with fixtures
+    nobody committed.
+    """
+    settings.MEDIA_ROOT = tmp_path / "media"
+
+
 @pytest.fixture
 def client() -> Client:
     """An unauthenticated Django test client."""

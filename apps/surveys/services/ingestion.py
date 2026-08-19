@@ -6,6 +6,7 @@ are pure, and the models it writes are pure storage.
 """
 
 import pandas as pd
+from django.core.files.base import ContentFile
 from django.db import transaction
 
 from ..models import Dataset, Question, QuestionType, Response, Survey
@@ -45,6 +46,11 @@ def ingest(survey: Survey, parsed: ParsedFile) -> Dataset:
         respondent_count=parsed.respondent_count,
         question_count=parsed.question_count,
     )
+
+    if parsed.content:
+        # Saved after creation so upload_path can read the version, which is
+        # only assigned once the row exists.
+        dataset.source_file.save(parsed.filename, ContentFile(parsed.content), save=True)
 
     profiles = profile_frame(parsed.frame)
     questions = _create_questions(dataset, profiles)

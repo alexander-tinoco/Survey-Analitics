@@ -14,6 +14,15 @@ from django.db import models
 from django.urls import reverse
 
 
+def upload_path(instance: "Dataset", filename: str) -> str:
+    """Where an uploaded export is stored.
+
+    Grouped by survey so a survey's uploads stay together on disk, and
+    prefixed with the version so two files of the same name do not collide.
+    """
+    return f"datasets/survey_{instance.survey_id}/v{instance.version}_{filename}"
+
+
 class QuestionType(models.TextChoices):
     """How a question's answers should be treated statistically.
 
@@ -65,6 +74,11 @@ class Dataset(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name="datasets")
     version = models.PositiveIntegerField()
     source_filename = models.CharField(max_length=255)
+    # The upload is kept, not just parsed and discarded. raw_value on each
+    # Response protects a single cell, but only the original file allows
+    # re-deriving everything after a parser fix — without asking the user to
+    # find and upload it again.
+    source_file = models.FileField(upload_to=upload_path, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     respondent_count = models.PositiveIntegerField(default=0)
     question_count = models.PositiveIntegerField(default=0)
@@ -80,6 +94,21 @@ class Dataset(models.Model):
 
     def get_absolute_url(self) -> str:
         return reverse("surveys:dataset_detail", args=[self.pk])
+
+    def delete(self, *args: object, **kwargs: object) -> tuple:
+        """Delete the dataset and the file it was ingested from.
+
+        Django removes the row but never the file behind a FileField, so
+        deleting datasets would otherwise leave orphaned uploads on disk
+        forever.
+        """
+        stored = self.source_file
+        result = super().delete(*args, **kwargs)
+
+        if stored:
+            stored.delete(save=False)
+
+        return result
 
 
 class Question(models.Model):

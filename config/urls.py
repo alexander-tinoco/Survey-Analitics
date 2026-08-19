@@ -4,6 +4,8 @@ Feature routes are mounted under ``/api/v1/`` by the milestones that add them;
 this module wires the project-level entry points and the error handlers.
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
@@ -20,6 +22,12 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health, name="health"),
 ]
+
+if settings.DEBUG:
+    # Development only. In production a web server serves MEDIA_ROOT, and
+    # uploads are reached through the ownership-checked download view rather
+    # than by guessing a path.
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler400 = "config.error_views.bad_request"
 handler403 = "config.error_views.permission_denied"

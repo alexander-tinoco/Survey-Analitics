@@ -92,6 +92,82 @@ class TestNumericInference:
         assert profile.scale == []
 
 
+class TestSpanishScales:
+    """The surveys this tool is built for are written in Spanish.
+
+    Without these scales, "Muy de acuerdo" reads as an unordered option. The
+    question still gets analyzed, but as a category, so nothing can tell that
+    "De acuerdo" sits between "Neutral" and "Muy de acuerdo" — the ordering a
+    rating scale exists to express is silently lost.
+    """
+
+    def test_a_spanish_agreement_scale_is_ordinal(self) -> None:
+        profile = profile_of(
+            [
+                "Muy de acuerdo",
+                "De acuerdo",
+                "Neutral",
+                "En desacuerdo",
+                "Muy en desacuerdo",
+                "De acuerdo",
+            ]
+        )
+
+        assert profile.type is InferredType.ORDINAL
+        assert profile.scale == [
+            "muy en desacuerdo",
+            "en desacuerdo",
+            "neutral",
+            "de acuerdo",
+            "muy de acuerdo",
+        ]
+
+    def test_a_spanish_satisfaction_scale_is_ordinal(self) -> None:
+        profile = profile_of(
+            ["Muy satisfecho", "Satisfecho", "Neutral", "Insatisfecho", "Satisfecho"]
+        )
+
+        assert profile.type is InferredType.ORDINAL
+        assert profile.scale[0] == "insatisfecho"
+        assert profile.scale[-1] == "muy satisfecho"
+
+    def test_a_spanish_frequency_scale_is_ordinal(self) -> None:
+        profile = profile_of(["Siempre", "A veces", "Nunca", "Casi siempre", "A veces"])
+
+        assert profile.type is InferredType.ORDINAL
+
+    def test_accents_do_not_break_a_scale_match(self) -> None:
+        """Exports are inconsistent about accents, and a scale match must not
+        fail over a missing tilde.
+        """
+        with_accent = profile_of(["Pésimo", "Malo", "Regular", "Bueno", "Excelente"])
+        without_accent = profile_of(["Pesimo", "Malo", "Regular", "Bueno", "Excelente"])
+
+        assert with_accent.type is InferredType.ORDINAL
+        assert without_accent.type is InferredType.ORDINAL
+        assert with_accent.scale == without_accent.scale
+
+    def test_accented_variants_of_one_answer_are_counted_once(self) -> None:
+        """ "Ingeniería" and "Ingenieria" are the same department, and
+        counting them separately splits a bar that should have been one.
+        """
+        profile = profile_of(["Ingeniería", "Ingenieria", "Ventas", "Ventas"])
+
+        assert profile.distinct_values == 2
+
+    def test_spanish_non_answers_count_as_missing(self) -> None:
+        profile = profile_of(["Sí", "No", "Sin respuesta", "Prefiero no decir", "No aplica", "Sí"])
+
+        assert profile.missing_count == 3
+
+    def test_unordered_spanish_options_stay_categorical(self) -> None:
+        """Departments have no order, in any language."""
+        profile = profile_of(["Ventas", "Soporte", "Ingeniería", "Ventas", "Soporte"])
+
+        assert profile.type is InferredType.CATEGORICAL
+        assert profile.scale == []
+
+
 class TestDirtyNumericColumns:
     def test_a_stray_word_does_not_turn_an_age_column_into_prose(self) -> None:
         """One typed "unknown" must not discard seven valid ages.

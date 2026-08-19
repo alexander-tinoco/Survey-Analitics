@@ -1,0 +1,24 @@
+{% comment %}
+Pagination control, shared by every paginated list.
+
+Rendered as a nav landmark with an accessible label, and the current page is
+marked with aria-current so a screen reader announces position rather than
+just a number in a row of links.
+{% endcomment %}
+{% if is_paginated %}
+  <nav class="pagination" aria-label="Pagination">
+    {% if page_obj.has_previous %}
+      <a class="btn btn--ghost" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+
+    <span class="pagination__status" aria-current="page">
+      Page <span class="numeric">{{ page_obj.number }}</span>
+      of <span class="numeric">{{ page_obj.paginator.num_pages }}</span>
+      · <span class="numeric">{{ page_obj.paginator.count }}</span> in total
+    </span>
+
+    {% if page_obj.has_next %}
+      <a class="btn btn--ghost" href="?page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+  </nav>
+{% endif %}

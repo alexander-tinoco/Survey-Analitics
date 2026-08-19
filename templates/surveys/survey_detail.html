@@ -10,7 +10,10 @@
       <h1>{{ survey.name }}</h1>
       {% if survey.description %}<p class="lede">{{ survey.description }}</p>{% endif %}
     </div>
-    <a class="btn" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a>
+    <div class="page-head__actions">
+      <a class="btn btn--ghost btn--danger" href="{% url 'surveys:delete' survey.pk %}">Delete survey</a>
+      <a class="btn" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a>
+    </div>
   </div>
 
   {% if datasets %}
@@ -24,6 +27,8 @@
           <th scope="col">Respondents</th>
           <th scope="col">Questions</th>
           <th scope="col">Uploaded</th>
+          <th scope="col">File</th>
+          <th scope="col"></th>
         </tr>
       </thead>
       <tbody>
@@ -34,6 +39,16 @@
             <td>{{ dataset.respondent_count }}</td>
             <td>{{ dataset.question_count }}</td>
             <td>{{ dataset.uploaded_at|date:"j M Y, H:i" }}</td>
+            <td>
+              {% if dataset.source_file %}
+                <a href="{% url 'surveys:dataset_file' dataset.pk %}">Download</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              <a class="link-danger" href="{% url 'surveys:dataset_delete' dataset.pk %}">Delete</a>
+            </td>
           </tr>
         {% endfor %}
       </tbody>

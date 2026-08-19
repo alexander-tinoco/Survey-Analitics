@@ -15,6 +15,10 @@
       </p>
     </div>
     <div class="page-head__actions">
+      {% if dataset.source_file %}
+        <a class="btn btn--ghost" href="{% url 'surveys:dataset_file' dataset.pk %}">Original file</a>
+      {% endif %}
+      <a class="btn btn--ghost btn--danger" href="{% url 'surveys:dataset_delete' dataset.pk %}">Delete</a>
       <a class="btn btn--ghost" href="{% url 'analytics:dashboard' dataset.pk %}">Distributions</a>
       <a class="btn" href="{% url 'analytics:insights' dataset.pk %}">See findings</a>
     </div>

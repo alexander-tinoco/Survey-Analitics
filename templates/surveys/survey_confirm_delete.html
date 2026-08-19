@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delete {{ survey.name }}?{% endblock %}
+
+{% block content %}
+  <section class="cat-panel">
+    <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+         alt="A cat asking whether you are sure">
+    <h1>Delete “{{ survey.name }}”?</h1>
+
+    {# Spells out what goes, rather than a generic "are you sure": for a
+       large survey this is tens of thousands of rows and cannot be undone. #}
+    <p>
+      This removes the survey and
+      <strong>{{ survey.datasets.count }}</strong>
+      upload{{ survey.datasets.count|pluralize }}, along with every response,
+      question and analysis stored under it.
+    </p>
+    <p><strong>This cannot be undone.</strong></p>
+
+    <form method="post" class="cat-panel__card">
+      {% csrf_token %}
+      <button class="btn btn--block btn--danger" type="submit">
+        Yes, delete everything
+      </button>
+    </form>
+
+    <p class="cat-panel__hint">
+      <a href="{{ survey.get_absolute_url }}">Keep it, take me back</a>
+    </p>
+  </section>
+{% endblock %}

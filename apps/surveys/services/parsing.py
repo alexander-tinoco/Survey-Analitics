@@ -28,10 +28,17 @@ class ParseError(Exception):
 
 @dataclass(frozen=True)
 class ParsedFile:
-    """A successfully read export."""
+    """A successfully read export, alongside the bytes it came from.
+
+    The original content travels with the parsed frame so ingestion can store
+    it. Re-reading the upload at that point would not work — a Django upload
+    is a stream, and it has already been consumed by the time parsing
+    succeeds.
+    """
 
     frame: pd.DataFrame
     filename: str
+    content: bytes = b""
 
     @property
     def respondent_count(self) -> int:
@@ -55,7 +62,7 @@ def parse_upload(content: bytes, filename: str) -> ParsedFile:
     else:
         raise ParseError("Only .csv, .xlsx and .xls files are supported.")
 
-    return ParsedFile(frame=_clean(frame), filename=filename)
+    return ParsedFile(frame=_clean(frame), filename=filename, content=content)
 
 
 def _read_csv(content: bytes) -> pd.DataFrame:

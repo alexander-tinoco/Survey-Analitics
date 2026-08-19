@@ -10,6 +10,7 @@ produces fewer false findings.
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -59,6 +60,13 @@ MIN_NUMERIC_RATIO = 0.8
 # Ordered scales, lowest to highest. Matching one of these is what separates
 # "Agree" (ordinal, differences are directional) from "Marketing"
 # (categorical, differences are not).
+#
+# Spanish scales are listed alongside the English ones because the surveys
+# this tool is built for are written in Spanish. Without them, "Muy de
+# acuerdo" reads as an unordered option: the question still gets analyzed,
+# but as a category, so nothing can tell that "De acuerdo" sits between
+# "Neutral" and "Muy de acuerdo" — the ordering a rating scale exists to
+# express is silently lost.
 ORDINAL_SCALES: list[list[str]] = [
     ["strongly disagree", "disagree", "neutral", "agree", "strongly agree"],
     ["strongly disagree", "disagree", "neither", "agree", "strongly agree"],
@@ -68,6 +76,28 @@ ORDINAL_SCALES: list[list[str]] = [
     ["very poor", "poor", "average", "good", "excellent"],
     ["very low", "low", "medium", "high", "very high"],
     ["not at all", "slightly", "moderately", "very", "extremely"],
+    # Spanish — agreement
+    ["totalmente en desacuerdo", "en desacuerdo", "neutral", "de acuerdo", "totalmente de acuerdo"],
+    ["muy en desacuerdo", "en desacuerdo", "neutral", "de acuerdo", "muy de acuerdo"],
+    [
+        "muy en desacuerdo",
+        "en desacuerdo",
+        "ni de acuerdo ni en desacuerdo",
+        "de acuerdo",
+        "muy de acuerdo",
+    ],
+    # Spanish — satisfaction
+    ["muy insatisfecho", "insatisfecho", "neutral", "satisfecho", "muy satisfecho"],
+    ["nada satisfecho", "poco satisfecho", "neutral", "satisfecho", "muy satisfecho"],
+    # Spanish — frequency
+    ["nunca", "casi nunca", "a veces", "casi siempre", "siempre"],
+    ["nunca", "rara vez", "a veces", "frecuentemente", "siempre"],
+    # Spanish — quality
+    ["muy malo", "malo", "regular", "bueno", "excelente"],
+    ["pesimo", "malo", "regular", "bueno", "excelente"],
+    # Spanish — intensity
+    ["muy bajo", "bajo", "medio", "alto", "muy alto"],
+    ["nada", "poco", "algo", "bastante", "mucho"],
 ]
 
 # Values that mean "no answer" regardless of the question.
@@ -82,6 +112,14 @@ MISSING_TOKENS = {
     "--",
     "no answer",
     "prefer not to say",
+    # Spanish equivalents, for the same reason the scales are bilingual.
+    "ninguno",
+    "ninguna",
+    "sin respuesta",
+    "no contesta",
+    "no aplica",
+    "prefiero no decir",
+    "prefiero no contestar",
 }
 
 
@@ -123,16 +161,22 @@ def normalize_answer(value: object) -> str:
 def canonical_answer(value: object) -> str:
     """Reduce an answer to the form used for grouping and counting.
 
-    Case is dropped here and only here. "Yes", "yes" and " Yes " are one
-    answer; counting them as three splits a bar chart that should have had
-    one bar, and inflates the distinct count that drives type inference.
+    Case and accents are dropped here and only here. "Yes", "yes" and " Yes "
+    are one answer; counting them as three splits a bar chart that should
+    have had one bar, and inflates the distinct count that drives type
+    inference.
+
+    Accents are folded because survey exports are inconsistent about them —
+    "Muy satisfecho" and "Muy satisfecho" typed without the accent are the
+    same answer, and a scale match must not fail over a missing tilde.
     """
-    return normalize_answer(value).lower()
+    stripped = unicodedata.normalize("NFKD", normalize_answer(value))
+    return "".join(char for char in stripped if not unicodedata.combining(char)).lower()
 
 
 def is_missing(value: object) -> bool:
     """Whether an answer represents no response."""
-    return normalize_answer(value).lower() in MISSING_TOKENS
+    return canonical_answer(value) in MISSING_TOKENS
 
 
 def profile_frame(frame: pd.DataFrame) -> list[QuestionProfile]:
@@ -233,7 +277,7 @@ def _match_ordinal_scale(values: pd.Series) -> list[str]:
     means the column is not that scale, and guessing an order for it would
     invent structure the data does not have.
     """
-    present = {v.lower() for v in values.unique() if v}
+    present = {canonical_answer(v) for v in values.unique() if v}
     if not present:
         return []
 
