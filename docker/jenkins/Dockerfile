@@ -34,4 +34,11 @@ RUN apt-get update \
 COPY docker/jenkins/plugins.txt /usr/share/jenkins/ref/plugins.txt
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
+# The mounted workspace belongs to the host user, not to anyone inside this
+# container, and git refuses to operate on a repository it considers to have
+# "dubious ownership". That check protects against running hooks from a
+# repository someone else controls; here the repository is the developer's own
+# and the mount is read-only, so it is declared safe explicitly.
+RUN git config --system --add safe.directory /workspace
+
 USER jenkins
