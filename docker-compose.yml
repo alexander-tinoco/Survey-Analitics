@@ -1,3 +1,12 @@
+# The code lives in the image, not in a bind mount. docker-compose.override.yml
+# adds the mount for local development, and Compose loads it automatically.
+#
+# CI cannot use it: Jenkins talks to the host's Docker daemon, so a bind mount
+# written as "." resolves against the *host* filesystem, not against the path
+# inside the Jenkins container — the source directory does not exist there and
+# /app comes up empty. The pipeline therefore passes -f docker-compose.yml to
+# load this file alone.
+
 services:
   db:
     image: postgres:16-alpine
@@ -26,10 +35,6 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
-    # Bind-mounted so edits are picked up without a rebuild. Production builds
-    # use the image contents instead.
-    volumes:
-      - .:/app
     # Host port is configurable so the stack does not collide with whatever
     # else is already listening locally. Container port stays fixed.
     ports:
@@ -46,8 +51,6 @@ services:
     build: .
     # Heavy analytics jobs run here so a request never blocks on them.
     command: celery -A config worker --loglevel=info
-    volumes:
-      - .:/app
     env_file:
       - .env
     depends_on:

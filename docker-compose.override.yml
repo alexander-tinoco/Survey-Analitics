@@ -1,0 +1,14 @@
+# Local development overrides, loaded automatically by Compose.
+#
+# Mounts the working tree over the image so edits are picked up without a
+# rebuild. CI deliberately skips this file — see the note in
+# docker-compose.yml.
+
+services:
+  web:
+    volumes:
+      - .:/app
+
+  worker:
+    volumes:
+      - .:/app

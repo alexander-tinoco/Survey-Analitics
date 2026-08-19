@@ -1,6 +1,6 @@
 // CI pipeline: lint, test, and enforce the coverage gate on every build.
 //
-// The stack runs through docker compose so the pipeline executes the same
+// The stack runs through docker compose -f docker-compose.yml so the pipeline executes the same
 // images a developer runs locally — a green build here means the same commands
 // pass on a workstation.
 
@@ -33,14 +33,14 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'docker compose build'
+                sh 'docker compose -f docker-compose.yml build'
             }
         }
 
         stage('Lint') {
             steps {
-                sh 'docker compose run --rm web ruff check --output-format=github .'
-                sh 'docker compose run --rm web ruff format --check .'
+                sh 'docker compose -f docker-compose.yml run --rm web ruff check --output-format=github .'
+                sh 'docker compose -f docker-compose.yml run --rm web ruff format --check .'
             }
         }
 
@@ -48,7 +48,7 @@ pipeline {
             steps {
                 // pytest carries the coverage gate from pyproject.toml, so a
                 // drop below the threshold fails the build here.
-                sh 'docker compose run --rm web pytest'
+                sh 'docker compose -f docker-compose.yml run --rm web pytest'
             }
         }
 
@@ -61,7 +61,7 @@ pipeline {
                 // -o addopts="" clears the project-wide --cov=. from pyproject,
                 // which would otherwise be added to this one rather than
                 // replaced, and drag the measurement back to the whole repo.
-                sh '''docker compose run --rm web pytest tests/analytics \
+                sh '''docker compose -f docker-compose.yml run --rm web pytest tests/analytics \
                         -o addopts="" \
                         --cov=apps/analytics/engine \
                         --cov-report=term-missing \
@@ -72,7 +72,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker compose down -v --remove-orphans || true'
+            sh 'docker compose -f docker-compose.yml down -v --remove-orphans || true'
             cleanWs()
         }
         failure {
