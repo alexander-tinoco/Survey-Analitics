@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}400 — SurveyAnalytics{% endblock %}
+
+{% block content %}
+  <section class="cat-panel">
+    <img class="cat-panel__art" src="{% static 'img/cat400.png' %}" alt="A confused cat">
+    <h1>That request came out garbled</h1>
+    <p>Something in the request did not parse. If you typed the address by hand, check it for a stray character.</p>
+    <p class="cat-panel__hint">
+      <a class="btn" href="{% url 'home' %}">Back to safety</a>
+    </p>
+  </section>
+{% endblock %}

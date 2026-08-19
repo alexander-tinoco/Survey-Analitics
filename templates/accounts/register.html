@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sign up — SurveyAnalytics{% endblock %}
+
+{% block content %}
+  <section class="cat-panel">
+    <img class="cat-panel__art" src="{% static 'img/catRegister.png' %}"
+         alt="A cat holding the door open">
+    <h1>Create your account</h1>
+
+    <form class="cat-panel__card" method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="form-errors">
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% for field in form %}{% include "_form_field.html" %}{% endfor %}
+      <button class="btn btn--block" type="submit">Sign up</button>
+    </form>
+
+    <p class="cat-panel__hint">
+      Already have one? <a href="{% url 'accounts:login' %}">Log in</a>.
+    </p>
+  </section>
+{% endblock %}

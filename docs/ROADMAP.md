@@ -32,7 +32,7 @@ and Jenkins reproduces all three.
 
 ---
 
-## ⬜ M1 — Authentication and shell
+## ✅ M1 — Authentication and shell
 
 `feat(auth): add JWT authentication and application shell`
 

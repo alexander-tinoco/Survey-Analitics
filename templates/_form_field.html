@@ -1,0 +1,19 @@
+{% comment %}
+Renders one form field with its label, help text, and errors.
+
+Kept in a partial so every form in the project reports errors the same way —
+markup duplicated per template drifts, and accessibility attributes are exactly
+what gets dropped when it does.
+{% endcomment %}
+<div class="field">
+  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {{ field }}
+  {% if field.help_text %}
+    <p class="field__help">{{ field.help_text }}</p>
+  {% endif %}
+  {% if field.errors %}
+    <ul class="field__errors">
+      {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</div>

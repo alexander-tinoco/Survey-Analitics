@@ -26,7 +26,12 @@ select = [
     "RUF",  # ruff-specific
 ]
 ignore = [
-    "S101",  # assert is how pytest asserts
+    "S101",     # assert is how pytest asserts
+    # Django and DRF configure classes declaratively: Meta.fields,
+    # list_display, fieldsets, permission_classes. These are read at class
+    # definition time and never mutated, so ClassVar annotations on every one
+    # of them would be noise no Django project carries.
+    "RUF012",
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -1,0 +1,295 @@
+/* SurveyAnalytics design system.
+ *
+ * The palette is taken from the illustrations themselves: ink black on
+ * off-white, with the mint from the cats' eyes as the single accent. One
+ * accent keeps the interface calm enough that a chart can introduce its own
+ * colors without competing with the chrome.
+ */
+
+:root {
+  --ink: #0b0b0b;
+  --paper: #fafaf8;
+  --mint: #b8f2e6;
+  --mint-deep: #1f6f63;
+
+  --muted: #6b6b66;
+  --line: #e4e4de;
+  --surface: #ffffff;
+  --danger: #b3261e;
+  --danger-soft: #fdecea;
+
+  --font-ui: "Poppins", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --ring: 0 0 0 3px var(--mint);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers are tabular everywhere: this is an analytics product, and digits
+   that shift width between rows make a column impossible to scan. */
+table,
+.numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-2);
+}
+
+h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+h2 { font-size: 1.5rem; }
+
+a {
+  color: var(--mint-deep);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Focus is never removed, only restyled. Keyboard users need to see where
+   they are, and the mint ring is visible against every surface here. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Layout ---------- */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.site-header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.site-header__brand img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.site-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+.site-footer {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* ---------- Cat-centered pages ---------- */
+
+/* Shared by auth, error, and empty states: one cat, one heading, one action.
+   These are the only places the illustrations appear — data views stay sober. */
+.cat-panel {
+  max-width: 26rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cat-panel__art {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  margin-bottom: var(--space-2);
+}
+
+.cat-panel__card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  text-align: left;
+}
+
+.cat-panel__hint {
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  text-align: center;
+}
+
+.hero__art {
+  width: min(280px, 70vw);
+  margin: 0 auto;
+}
+
+.hero__lede {
+  font-size: 1.15rem;
+  color: var(--muted);
+  max-width: 34rem;
+  margin: 0 auto var(--space-3);
+}
+
+@media (min-width: 48rem) {
+  .hero {
+    grid-template-columns: 1.2fr 1fr;
+    text-align: left;
+  }
+  .hero__lede { margin-inline: 0; }
+  .hero__art { margin: 0; }
+}
+
+/* ---------- Forms ---------- */
+
+.field {
+  margin-bottom: var(--space-2);
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field input:focus-visible {
+  border-color: var(--mint-deep);
+}
+
+.field__help {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.field__errors {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+.form-errors {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9rem;
+  list-style: none;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-block;
+  padding: 0.65rem 1.2rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  background: var(--mint-deep);
+  border-color: var(--mint-deep);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn--ghost:hover {
+  background: var(--mint);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* Respect users who asked the system for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

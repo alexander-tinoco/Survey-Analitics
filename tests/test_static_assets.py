@@ -23,6 +23,5 @@ CAT_ASSETS = [
 def test_cat_illustration_is_resolvable_by_the_static_finder(asset: str) -> None:
     """Every cat referenced by a template must resolve to a real file."""
     assert finders.find(asset) is not None, (
-        f"{asset} is not reachable by the static finder. "
-        "Cat illustrations belong in static/img/."
+        f"{asset} is not reachable by the static finder. Cat illustrations belong in static/img/."
     )

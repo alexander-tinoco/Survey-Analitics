@@ -1,0 +1,40 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SurveyAnalytics{% endblock %}</title>
+  <meta name="description" content="{% block description %}Turn survey responses into readable findings.{% endblock %}">
+  <link rel="icon" href="{% static 'img/catHomePage.png' %}">
+  <link rel="stylesheet" href="{% static 'css/cats.css' %}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="site-header__brand" href="{% url 'home' %}">
+      <img src="{% static 'img/catHomePage.png' %}" alt="">
+      SurveyAnalytics
+    </a>
+    <nav class="site-nav">
+      {% if user.is_authenticated %}
+        <span class="site-nav__user">{{ user.short_name }}</span>
+        {# Logout is a POST: a GET link could be triggered by a prefetch. #}
+        <form method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button class="btn btn--ghost" type="submit">Log out</button>
+        </form>
+      {% else %}
+        <a class="btn btn--ghost" href="{% url 'accounts:login' %}">Log in</a>
+        <a class="btn" href="{% url 'accounts:register' %}">Sign up</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="site-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>SurveyAnalytics — the analysis your survey tool stopped short of.</p>
+  </footer>
+</body>
+</html>
