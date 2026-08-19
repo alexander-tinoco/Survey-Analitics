@@ -625,3 +625,79 @@ a {
   flex-wrap: wrap;
   gap: var(--space-1);
 }
+
+/* ---------- Findings ----------
+ *
+ * The one screen where prose outweighs numbers, so it is set wider-spaced and
+ * larger than the tables. A finding should read like a sentence someone wrote,
+ * not like a cell that escaped its grid.
+ */
+
+.findings {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  counter-reset: finding;
+}
+
+.finding {
+  position: relative;
+  padding: var(--space-3) var(--space-3) var(--space-2) var(--space-5);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* Numbered so a reader can refer to one out loud. */
+.finding::before {
+  counter-increment: finding;
+  content: counter(finding);
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.finding__text {
+  margin: 0 0 var(--space-1);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.finding__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.finding__question {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* The strongest kind of finding gets the accent; the rest stay quiet so the
+   page does not read as a wall of highlights. */
+.finding--relationship {
+  border-left: 3px solid var(--mint-deep);
+}
+
+.finding--polarization {
+  border-left: 3px solid var(--danger);
+}
+
+.finding--profile {
+  border-left: 3px solid var(--ink);
+}
+
+.tag--relationship,
+.tag--profile,
+.tag--participation,
+.tag--distribution {
+  border-color: var(--muted);
+  color: var(--muted);
+}

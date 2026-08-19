@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from apps.surveys.models import Dataset
 
 from .presenters import summary_to_dict
-from .services import patterns, relational
+from .services import insights, patterns, relational
 from .services.descriptive import describe
 
 
@@ -56,4 +56,17 @@ class PatternAnalysisView(APIView):
         return Response(
             patterns.report_to_dict(report),
             status=200 if report.is_ready else 202,
+        )
+
+
+class InsightsAPIView(APIView):
+    """Return the readable findings, or report which layers are still running."""
+
+    def get(self, request: Request, pk: int) -> Response:
+        dataset = get_object_or_404(Dataset, pk=pk, survey__owner=request.user)
+        report = insights.build(dataset)
+
+        return Response(
+            insights.report_to_dict(report),
+            status=200 if report.is_complete else 202,
         )

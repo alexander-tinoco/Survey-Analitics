@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Findings — {{ dataset }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="crumb">
+        <a href="{% url 'surveys:list' %}">Surveys</a> /
+        <a href="{{ dataset.survey.get_absolute_url }}">{{ dataset.survey.name }}</a> /
+        <a href="{{ dataset.get_absolute_url }}">v{{ dataset.version }}</a>
+      </p>
+      <h1>What your data says</h1>
+      <p class="lede">
+        The findings, in plain language, with the numbers behind each one.
+      </p>
+    </div>
+    <div class="page-head__actions">
+      <a class="btn btn--ghost" href="{% url 'analytics:dashboard' dataset.pk %}">Distributions</a>
+      <a class="btn btn--ghost" href="{% url 'analytics:relational' dataset.pk %}">Relationships</a>
+      <a class="btn btn--ghost" href="{% url 'analytics:patterns' dataset.pk %}">Groups</a>
+    </div>
+  </div>
+
+  {% if not report.is_complete %}
+    {# Says which layers are missing rather than presenting a partial list as
+       the whole answer. "Nothing found" and "not finished" are different. #}
+    <p class="callout" data-poll-url="{% url 'analytics_api:insights' dataset.pk %}">
+      Still working on {{ report.pending_layers|join:" and " }}. The findings below
+      are what the finished layers found so far — this page updates itself.
+      <span role="status" aria-live="polite" class="cat-panel__hint">Working…</span>
+    </p>
+    <script src="{% static 'js/poll.js' %}"></script>
+  {% endif %}
+
+  {% if rendered.insights %}
+    <ol class="findings">
+      {% for insight in rendered.insights %}
+        <li class="finding finding--{{ insight.kind }}">
+          <p class="finding__text">{{ insight.text }}</p>
+          <p class="finding__meta">
+            <span class="tag tag--{{ insight.kind }}">{{ insight.kind }}</span>
+            {% for question in insight.questions %}
+              <span class="finding__question">{{ question }}</span>
+            {% endfor %}
+          </p>
+        </li>
+      {% endfor %}
+    </ol>
+    <p class="card__note">
+      Findings are ordered by how much they matter: how strong the pattern is,
+      and how many respondents it covers. Anything that failed its statistical
+      assumptions, or that survives only before correcting for the number of
+      comparisons made, is left out entirely.
+    </p>
+
+  {% elif report.is_complete %}
+    {# An empty page is a real result here, and saying so plainly is what
+       separates it from a broken one. #}
+    <section class="cat-panel">
+      <img class="cat-panel__art" src="{% static 'img/cat404.png' %}"
+           alt="A cat finding nothing worth reporting">
+      <h2>Nothing stands out</h2>
+      <p>
+        No relationship, group or split in this dataset is strong enough to
+        report with confidence. That is a finding in itself: the answers vary
+        individually rather than in patterns.
+      </p>
+      <p class="cat-panel__hint">
+        The <a href="{% url 'analytics:dashboard' dataset.pk %}">distributions</a>
+        are still worth a look.
+      </p>
+    </section>
+  {% endif %}
+{% endblock %}

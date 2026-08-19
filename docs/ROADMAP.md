@@ -10,6 +10,9 @@ Milestones are approved and executed in order.
 
 **Legend:** ⬜ not started · 🟨 in progress · ✅ done
 
+All six milestones are delivered. What comes next is listed under
+[Out of scope](#out-of-scope) — deliberately, so it stays decided.
+
 ---
 
 ## ✅ M0 — Foundation
@@ -121,7 +124,7 @@ divide them.
 
 ---
 
-## ⬜ M6 — Insight generation
+## ✅ M6 — Insight generation
 
 `feat(insights): add plain-language insight generation`
 

@@ -21,9 +21,17 @@ runs three layers over the responses and states what it finds in plain language:
 | **Relational** | What goes with what? Contingency tables, chi-square, segment comparison. |
 | **Pattern** | Who resembles whom? Respondent clusters, polarized vs. consensus questions. |
 
-The output is a sentence a non-statistician can read — *"68% of respondents who
-selected 'Unsatisfied' also reported low support availability"* — backed by the
-numbers that produced it.
+The output is a sentence a non-statistician can read, backed by the numbers that
+produced it. Real output, from a 200-respondent dataset:
+
+> 67.3% of respondents who answered "Engineering" to "Department" also answered
+> "Agree" to "Satisfaction" — against 33.5% across everyone.
+
+And on 30 respondents of random answers, the same engine reports **nothing at
+all**. That is the harder half: a chi-square returns a plausible number for any
+two columns, so findings are withheld unless they clear their own statistical
+assumptions, survive correction for the number of comparisons made, and cover
+enough respondents to describe someone.
 
 Building surveys is deliberately **out of scope**. Google Forms does that well.
 The gap is on the analysis side, and that is the entire product.
@@ -50,6 +58,15 @@ make up
 
 The application is then at <http://localhost:8000>, with a health check at
 <http://localhost:8000/health/>.
+
+## What it does not do
+
+Refuses to report a relationship whose expected cell counts are too small for
+chi-square to mean anything. Refuses to call respondents a "segment" unless the
+grouping beats one produced by shuffling the same answers at random. Refuses to
+report a p-value without the effect size beside it. Each refusal is enforced by
+a test, because the tempting failure in this domain is not a crash — it is a
+confident sentence about noise.
 
 ## Common tasks
 

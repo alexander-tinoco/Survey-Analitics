@@ -9,7 +9,7 @@ from django.views.generic import DetailView
 from apps.surveys.models import Dataset
 
 from .presenters import summary_to_dict
-from .services import patterns, relational
+from .services import insights, patterns, relational
 from .services.descriptive import describe
 
 
@@ -74,4 +74,23 @@ class PatternDashboardView(LoginRequiredMixin, DetailView):
 
         context["report"] = report
         context["rendered"] = patterns.report_to_dict(report)
+        return context
+
+
+class InsightsView(LoginRequiredMixin, DetailView):
+    """The readable findings for a dataset — what the product is for."""
+
+    model = Dataset
+    template_name = "analytics/insights.html"
+    context_object_name = "dataset"
+
+    def get_queryset(self) -> QuerySet:
+        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        report = insights.build(self.object)
+
+        context["report"] = report
+        context["rendered"] = insights.report_to_dict(report)
         return context

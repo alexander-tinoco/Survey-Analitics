@@ -4,6 +4,7 @@ from django.urls import path
 
 from .views import (
     DescriptiveDashboardView,
+    InsightsView,
     PatternDashboardView,
     RelationalDashboardView,
 )
@@ -18,4 +19,5 @@ urlpatterns = [
         name="relational",
     ),
     path("datasets/<int:pk>/groups/", PatternDashboardView.as_view(), name="patterns"),
+    path("datasets/<int:pk>/findings/", InsightsView.as_view(), name="insights"),
 ]

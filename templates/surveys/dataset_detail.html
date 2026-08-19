@@ -14,7 +14,10 @@
         {{ dataset.source_filename }} · uploaded {{ dataset.uploaded_at|date:"j M Y, H:i" }}
       </p>
     </div>
-    <a class="btn" href="{% url 'analytics:dashboard' dataset.pk %}">Analyze</a>
+    <div class="page-head__actions">
+      <a class="btn btn--ghost" href="{% url 'analytics:dashboard' dataset.pk %}">Distributions</a>
+      <a class="btn" href="{% url 'analytics:insights' dataset.pk %}">See findings</a>
+    </div>
   </div>
 
   {% if messages %}
