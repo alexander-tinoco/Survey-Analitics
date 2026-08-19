@@ -1,4 +1,4 @@
-.PHONY: help build up down logs worker-logs shell test test-engine lint format migrate superuser clean
+.PHONY: help build up down logs worker-logs worker-reload shell test test-engine lint format migrate superuser clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -18,6 +18,11 @@ logs:  ## Tail the web service logs
 
 worker-logs:  ## Tail the Celery worker logs
 	docker compose logs -f worker
+
+worker-reload:  ## Restart the worker to pick up code changes
+	# Celery does not reload code the way runserver does, so a newly added
+	# or edited task is invisible until the worker restarts.
+	docker compose restart worker
 
 shell:  ## Open a shell inside the web container
 	docker compose run --rm web bash

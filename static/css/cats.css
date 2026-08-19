@@ -599,3 +599,29 @@ a {
   background: var(--danger-soft);
   color: var(--danger);
 }
+
+/* Verdict tags. Each carries its word as well as its color, so the meaning
+   survives for a colorblind reader and in a printed page. */
+.tag--polarized {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.tag--consensus {
+  border-color: var(--mint-deep);
+  background: var(--mint);
+  color: var(--mint-deep);
+}
+
+.tag--divided,
+.tag--mixed {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+.page-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}

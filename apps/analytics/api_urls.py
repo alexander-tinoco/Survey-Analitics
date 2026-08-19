@@ -2,11 +2,16 @@
 
 from django.urls import path
 
-from .api_views import DescriptiveSummaryView, RelationalAnalysisView
+from .api_views import (
+    DescriptiveSummaryView,
+    PatternAnalysisView,
+    RelationalAnalysisView,
+)
 
 app_name = "analytics_api"
 
 urlpatterns = [
     path("datasets/<int:pk>/descriptive/", DescriptiveSummaryView.as_view(), name="descriptive"),
     path("datasets/<int:pk>/relational/", RelationalAnalysisView.as_view(), name="relational"),
+    path("datasets/<int:pk>/patterns/", PatternAnalysisView.as_view(), name="patterns"),
 ]

@@ -106,7 +106,7 @@ the result is cached, and re-uploading the dataset invalidates it.
 
 ---
 
-## ⬜ M5 — Pattern layer
+## ✅ M5 — Pattern layer
 
 `feat(analytics): add respondent clustering and polarization detection`
 

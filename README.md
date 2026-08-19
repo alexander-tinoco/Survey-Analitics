@@ -59,6 +59,7 @@ make test        # pytest with coverage
 make lint        # ruff check + format check
 make format      # apply fixes
 make shell       # shell inside the web container
+make worker-reload  # restart Celery after editing a task
 make clean       # stop the stack and drop the database volume
 ```
 

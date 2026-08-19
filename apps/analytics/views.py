@@ -9,7 +9,7 @@ from django.views.generic import DetailView
 from apps.surveys.models import Dataset
 
 from .presenters import summary_to_dict
-from .services import relational
+from .services import patterns, relational
 from .services.descriptive import describe
 
 
@@ -55,4 +55,23 @@ class RelationalDashboardView(LoginRequiredMixin, DetailView):
         context["report"] = report
         context["associations"] = [relational.association_to_dict(a) for a in report.associations]
         context["significant_count"] = len(report.significant)
+        return context
+
+
+class PatternDashboardView(LoginRequiredMixin, DetailView):
+    """Show respondent groups and question polarization."""
+
+    model = Dataset
+    template_name = "analytics/patterns.html"
+    context_object_name = "dataset"
+
+    def get_queryset(self) -> QuerySet:
+        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        report = patterns.request_analysis(self.object)
+
+        context["report"] = report
+        context["rendered"] = patterns.report_to_dict(report)
         return context

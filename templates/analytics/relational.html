@@ -14,7 +14,10 @@
       <h1>What goes with what</h1>
       <p class="lede">Which answers travel together, and which pairings are just noise.</p>
     </div>
-    <a class="btn btn--ghost" href="{% url 'analytics:dashboard' dataset.pk %}">Distributions</a>
+    <div class="page-head__actions">
+      <a class="btn btn--ghost" href="{% url 'analytics:dashboard' dataset.pk %}">Distributions</a>
+      <a class="btn" href="{% url 'analytics:patterns' dataset.pk %}">Find groups</a>
+    </div>
   </div>
 
   {% if not report.is_ready %}

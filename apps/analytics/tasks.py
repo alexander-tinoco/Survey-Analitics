@@ -6,7 +6,7 @@ from celery import shared_task
 
 from apps.surveys.models import Dataset
 
-from .services import relational
+from .services import patterns, relational
 
 logger = logging.getLogger(__name__)
 
@@ -43,3 +43,30 @@ def compute_relational_analysis(dataset_id: int) -> int:
 
     logger.info("Analyzed dataset %s: %s associations", dataset_id, len(associations))
     return len(associations)
+
+
+@shared_task(
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    max_retries=3,
+    name="analytics.compute_pattern_analysis",
+)
+def compute_pattern_analysis(dataset_id: int) -> int:
+    """Group respondents and measure how divided each question is.
+
+    Returns the number of groups found, which distinguishes a finished job
+    from one that ran and correctly found no structure.
+    """
+    try:
+        payload = patterns.compute_and_cache(dataset_id)
+    except Dataset.DoesNotExist:
+        logger.info("Dataset %s no longer exists; skipping analysis", dataset_id)
+        patterns.clear(dataset_id)
+        return 0
+    except Exception:
+        patterns.clear(dataset_id)
+        raise
+
+    found = len(payload.clusters.groups)
+    logger.info("Pattern analysis for dataset %s: %s groups", dataset_id, found)
+    return found

@@ -2,7 +2,11 @@
 
 from django.urls import path
 
-from .views import DescriptiveDashboardView, RelationalDashboardView
+from .views import (
+    DescriptiveDashboardView,
+    PatternDashboardView,
+    RelationalDashboardView,
+)
 
 app_name = "analytics"
 
@@ -13,4 +17,5 @@ urlpatterns = [
         RelationalDashboardView.as_view(),
         name="relational",
     ),
+    path("datasets/<int:pk>/groups/", PatternDashboardView.as_view(), name="patterns"),
 ]
