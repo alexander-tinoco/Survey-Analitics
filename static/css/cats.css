@@ -737,3 +737,22 @@ a {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* ---------- Export ---------- */
+
+.export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.export__label {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

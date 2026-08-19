@@ -48,6 +48,16 @@
         </li>
       {% endfor %}
     </ol>
+    <nav class="export" aria-label="Export findings">
+      <span class="export__label">Take these with you:</span>
+      <a class="btn btn--ghost" href="{% url 'analytics:insights_export' dataset.pk 'csv' %}">
+        Download CSV
+      </a>
+      <a class="btn btn--ghost" href="{% url 'analytics:insights_export' dataset.pk 'json' %}">
+        Download JSON
+      </a>
+    </nav>
+
     <p class="card__note">
       Findings are ordered by how much they matter: how strong the pattern is,
       and how many respondents it covers. Anything that failed its statistical

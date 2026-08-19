@@ -2,12 +2,16 @@
 
 from typing import Any
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import QuerySet
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
 from django.views.generic import DetailView
 
 from apps.surveys.models import Dataset
 
+from . import exports
 from .presenters import summary_to_dict
 from .services import insights, patterns, relational
 from .services.descriptive import describe
@@ -94,3 +98,45 @@ class InsightsView(LoginRequiredMixin, DetailView):
         context["report"] = report
         context["rendered"] = insights.report_to_dict(report)
         return context
+
+
+class InsightsExportView(LoginRequiredMixin, DetailView):
+    """Download the findings as CSV or JSON.
+
+    Refuses to export while a layer is still computing: a file is taken away
+    and read later, with no indication that it was a partial answer at the
+    moment it was written.
+    """
+
+    model = Dataset
+
+    def get_queryset(self) -> QuerySet:
+        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
+
+    def get(self, request: Any, *args: Any, **kwargs: Any) -> HttpResponse:
+        dataset = self.get_object()
+        report = insights.build(dataset)
+
+        if not report.is_complete:
+            messages.info(
+                request,
+                "The analysis is still running. The findings will be exportable "
+                "once every layer has finished.",
+            )
+            return redirect("analytics:insights", pk=dataset.pk)
+
+        rendered = insights.report_to_dict(report)
+        wants_json = kwargs.get("fmt") == "json"
+
+        if wants_json:
+            response = JsonResponse(rendered, json_dumps_params={"indent": 2})
+            filename = exports.findings_filename(dataset, "json")
+        else:
+            response = HttpResponse(
+                exports.findings_to_csv(rendered["insights"]),
+                content_type="text/csv; charset=utf-8",
+            )
+            filename = exports.findings_filename(dataset, "csv")
+
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
