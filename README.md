@@ -1,7 +1,7 @@
 <h1 align="center">SurveyAnalytics</h1>
 
 <p align="center">
-  <img src="images/catHomePage.png" alt="Cat playing a guitar" width="180">
+  <img src="static/img/catHomePage.png" alt="Cat playing a guitar" width="180">
 </p>
 
 <p align="center">
@@ -75,7 +75,8 @@ apps/              Feature apps (added per milestone)
 docs/
   ROADMAP.md       Milestones and their commits
   adr/             Architecture decision records
-images/            Cat illustrations used across the UI
+static/
+  img/             Cat illustrations, served as Django static files
 tests/             Test suite
 ```
 

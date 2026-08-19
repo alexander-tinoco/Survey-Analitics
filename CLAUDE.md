@@ -244,7 +244,7 @@ This project is a portfolio piece. It should read like production code.
 ## 5. Design system — the cats
 
 The product is professional; the **personality is playful**. The whole visual
-identity is built around the cat illustrations in [`images/`](images/).
+identity is built around the cat illustrations in [`static/img/`](static/img/).
 
 ### Available assets
 
@@ -259,7 +259,7 @@ identity is built around the cat illustrations in [`images/`](images/).
 
 If a state needs a cat that doesn't exist yet (empty dataset, processing, 500),
 source a new illustration **in the same style** — black flat lineart on a
-transparent/white background with sparse mint accents — and add it to `images/`
+transparent/white background with sparse mint accents — and add it to `static/img/`
 with the same naming convention.
 
 ### Visual rules

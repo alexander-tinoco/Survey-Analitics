@@ -12,5 +12,4 @@ __pycache__/
 .coverage
 htmlcov/
 docs/
-images/
 *.md

@@ -30,8 +30,10 @@ services:
     # use the image contents instead.
     volumes:
       - .:/app
+    # Host port is configurable so the stack does not collide with whatever
+    # else is already listening locally. Container port stays fixed.
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8000}:8000"
     env_file:
       - .env
     depends_on:
