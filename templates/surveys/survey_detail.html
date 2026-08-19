@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ survey.name }} — SurveyAnalytics{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="crumb"><a href="{% url 'surveys:list' %}">Surveys</a></p>
+      <h1>{{ survey.name }}</h1>
+      {% if survey.description %}<p class="lede">{{ survey.description }}</p>{% endif %}
+    </div>
+    <a class="btn" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a>
+  </div>
+
+  {% if datasets %}
+    <h2>Uploads</h2>
+    <table class="data-table">
+      <caption class="visually-hidden">Datasets uploaded to this survey</caption>
+      <thead>
+        <tr>
+          <th scope="col">Version</th>
+          <th scope="col">File</th>
+          <th scope="col">Respondents</th>
+          <th scope="col">Questions</th>
+          <th scope="col">Uploaded</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dataset in datasets %}
+          <tr>
+            <th scope="row"><a href="{{ dataset.get_absolute_url }}">v{{ dataset.version }}</a></th>
+            <td>{{ dataset.source_filename }}</td>
+            <td>{{ dataset.respondent_count }}</td>
+            <td>{{ dataset.question_count }}</td>
+            <td>{{ dataset.uploaded_at|date:"j M Y, H:i" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="card__note">
+      Each upload is kept as its own version. Earlier results stay valid for
+      the data they were computed from.
+    </p>
+  {% else %}
+    <section class="cat-panel">
+      <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+           alt="A cat waiting for a file">
+      <h2>No responses yet</h2>
+      <p>Upload a CSV or Excel export to get started.</p>
+      <p><a class="btn" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a></p>
+    </section>
+  {% endif %}
+{% endblock %}

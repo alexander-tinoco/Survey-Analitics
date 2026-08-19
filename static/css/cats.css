@@ -293,3 +293,206 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Data views ----------
+ *
+ * No cats below this line. The illustrations own the landing, auth, error and
+ * empty states; once real numbers are on screen the interface gets out of
+ * their way. Tables and stats stay sober so a reader trusts them.
+ */
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.crumb {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.lede {
+  margin: 0;
+  color: var(--muted);
+}
+
+.card-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--mint);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.15rem;
+}
+
+.card h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.card h2 a:hover {
+  text-decoration: underline;
+}
+
+.card__note,
+.card__meta {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- Stats ---------- */
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  flex: 1 1 8rem;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.stat__value {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.stat__label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Tables ---------- */
+
+/* Wide tables scroll inside their own box rather than pushing the page
+   sideways: a horizontally scrolling body loses the navigation. */
+.data-table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Labels read left, numbers read right: the eye compares digits by their
+   last place, and centered numbers make that impossible. */
+.data-table thead th:first-child,
+.data-table tbody th,
+.data-table__text {
+  text-align: left;
+  white-space: normal;
+}
+
+.data-table thead th {
+  border-bottom-width: 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.data-table tbody tr:hover {
+  background: var(--paper);
+}
+
+.data-table__text {
+  max-width: 26rem;
+  font-weight: 500;
+}
+
+/* ---------- Question type tags ---------- */
+
+/* Type is also carried by the label text, never by color alone — a
+   colorblind reader must be able to tell ordinal from categorical. */
+.tag {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tag--ordinal {
+  border-color: var(--mint-deep);
+  background: var(--mint);
+  color: var(--mint-deep);
+}
+
+.tag--numeric {
+  border-color: var(--ink);
+}
+
+.tag--free_text {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ---------- Messages ---------- */
+
+.messages {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.message {
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--mint-deep);
+  border-radius: var(--radius-sm);
+  background: var(--mint);
+  color: var(--mint-deep);
+  font-size: 0.9rem;
+}
+
+/* Available to screen readers, invisible on screen. Table captions use this:
+   the heading above already says what the table is, but a screen reader
+   navigating table-by-table has no such context. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

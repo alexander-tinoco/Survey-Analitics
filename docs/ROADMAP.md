@@ -51,7 +51,7 @@ and the error pages render.
 
 ---
 
-## ⬜ M2 — Ingestion
+## ✅ M2 — Ingestion
 
 `feat(ingest): add survey dataset upload and parsing`
 

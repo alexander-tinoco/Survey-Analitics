@@ -16,6 +16,7 @@
     </a>
     <nav class="site-nav">
       {% if user.is_authenticated %}
+        <a href="{% url 'surveys:list' %}">Surveys</a>
         <span class="site-nav__user">{{ user.short_name }}</span>
         {# Logout is a POST: a GET link could be triggered by a prefetch. #}
         <form method="post" action="{% url 'accounts:logout' %}">

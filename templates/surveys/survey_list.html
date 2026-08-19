@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your surveys — SurveyAnalytics{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1>Your surveys</h1>
+    <a class="btn" href="{% url 'surveys:create' %}">New survey</a>
+  </div>
+
+  {% if surveys %}
+    <ul class="card-list">
+      {% for survey in surveys %}
+        <li class="card">
+          <h2><a href="{{ survey.get_absolute_url }}">{{ survey.name }}</a></h2>
+          {% if survey.description %}<p class="card__note">{{ survey.description }}</p>{% endif %}
+          <p class="card__meta">
+            {% with latest=survey.latest_dataset %}
+              {% if latest %}
+                v{{ latest.version }} ·
+                <span class="numeric">{{ latest.respondent_count }}</span> respondents ·
+                <span class="numeric">{{ latest.question_count }}</span> questions
+              {% else %}
+                No data uploaded yet
+              {% endif %}
+            {% endwith %}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    {# Empty states are where the cats belong: nothing to analyze yet. #}
+    <section class="cat-panel">
+      <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+           alt="A cat waiting for something to analyze">
+      <h2>Nothing to analyze yet</h2>
+      <p>Create a survey, upload its responses, and the analysis starts here.</p>
+      <p><a class="btn" href="{% url 'surveys:create' %}">Create your first survey</a></p>
+    </section>
+  {% endif %}
+{% endblock %}

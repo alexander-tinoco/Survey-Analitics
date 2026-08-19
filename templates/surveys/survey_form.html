@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}New survey — SurveyAnalytics{% endblock %}
+
+{% block content %}
+  <section class="cat-panel">
+    <h1>Name your survey</h1>
+    <form class="cat-panel__card" method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="form-errors">
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% for field in form %}{% include "_form_field.html" %}{% endfor %}
+      <button class="btn btn--block" type="submit">Create survey</button>
+    </form>
+    <p class="cat-panel__hint"><a href="{% url 'surveys:list' %}">Back to your surveys</a></p>
+  </section>
+{% endblock %}

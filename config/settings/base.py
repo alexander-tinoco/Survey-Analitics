@@ -35,6 +35,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.accounts",
+    "apps.surveys",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -90,7 +91,7 @@ CELERY_TIMEZONE = "UTC"
 AUTH_USER_MODEL = "accounts.User"
 
 LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "home"
+LOGIN_REDIRECT_URL = "surveys:list"
 LOGOUT_REDIRECT_URL = "home"
 
 AUTH_PASSWORD_VALIDATORS = [

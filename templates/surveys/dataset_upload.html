@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Upload responses — {{ survey.name }}{% endblock %}
+
+{% block content %}
+  <section class="cat-panel">
+    <img class="cat-panel__art" src="{% static 'img/catRegister.png' %}"
+         alt="A cat ready to receive your file">
+    <h1>Upload responses</h1>
+    <p>for {{ survey.name }}</p>
+
+    <form class="cat-panel__card" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="form-errors">
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% for field in form %}{% include "_form_field.html" %}{% endfor %}
+      <button class="btn btn--block" type="submit">Upload and parse</button>
+    </form>
+
+    <p class="cat-panel__hint">
+      Uploading again creates a new version. Nothing is overwritten.
+    </p>
+  </section>
+{% endblock %}
