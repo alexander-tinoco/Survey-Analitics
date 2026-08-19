@@ -89,14 +89,35 @@ touched by the change.
 
 ## 3. Task size and commit discipline
 
-### Small tasks, always
+### One commit = one working vertical slice
 
-A task is **one coherent, reviewable change** — roughly one model, one service, one
-endpoint, one template. If a task needs more than ~5 files or is hard to describe in
-a single sentence, it is too big: split it and get the split approved first.
+A task is a **complete, functional unit of work** — something that does a real job
+end to end and leaves the repo in a working state. Not a single file, and not a
+whole milestone.
 
-Each approved task ends in **its own commit**. No batching several tasks into one
-commit, no end-of-day mega-commits.
+The right granularity is a **vertical slice**: the model *and* its migration *and*
+the service that uses it *and* the serializer *and* the endpoint *and* the tests
+that cover it, all in one commit. Splitting those apart produces commits that don't
+build on their own and a history nobody can bisect.
+
+Good task boundaries:
+
+- ✅ "CSV/XLSX ingestion: model, upload endpoint, parser service, tests"
+- ✅ "Chi-square contingency analysis: engine function, Celery task, cache layer, tests"
+- ✅ "JWT auth: config, endpoints, login/register templates, tests"
+
+Wrong on either side:
+
+- ❌ "Add the ResponseDataset model" — too small, does nothing by itself
+- ❌ "Build the whole analytics engine" — too big to review or approve
+
+The test is simple: **could someone check out this commit and have a working repo
+where that feature does its job?** If yes, it's the right size. If the change is
+getting hard to describe in two or three sentences, it has grown into a milestone —
+split it and get the split approved first.
+
+Each approved task ends in **its own commit**. No end-of-day mega-commits mixing
+unrelated features.
 
 ### Commit rules — read carefully
 
