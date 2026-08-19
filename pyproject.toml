@@ -1,0 +1,65 @@
+[project]
+name = "surveyanalytics"
+version = "0.1.0"
+description = "Survey analytics engine that turns response data into readable insights"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # import sorting
+    "N",    # naming conventions
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "DJ",   # Django-specific checks
+    "S",    # security (bandit)
+    "SIM",  # simplification
+    "BLE",  # blind except
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "S101",  # assert is how pytest asserts
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Settings modules intentionally use star imports to layer environments.
+"config/settings/*.py" = ["F403", "F405"]
+"tests/*" = ["S105", "S106"]  # hardcoded test credentials are fine
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.local"
+python_files = ["test_*.py"]
+addopts = [
+    "--strict-markers",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "config/wsgi.py",
+    "config/asgi.py",
+    "manage.py",
+]
+
+[tool.coverage.report]
+# Enforced in CI. Raised deliberately as the analytics engine lands.
+fail_under = 85
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

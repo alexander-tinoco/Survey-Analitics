@@ -4,100 +4,136 @@ Delivery plan for SurveyAnalytics. Scope comes from
 [`survey-analytics-idea.md`](../survey-analytics-idea.md); process rules come from
 [`CLAUDE.md`](../CLAUDE.md).
 
-Each row below is **one commit**: a working vertical slice that leaves the
-repository in a functional state. Milestones are approved and executed in order.
+Each milestone below is **one commit**: a working vertical slice that leaves the
+repository in a functional state, with its tests and its documentation included.
+Milestones are approved and executed in order.
 
 **Legend:** ⬜ not started · 🟨 in progress · ✅ done
 
 ---
 
-## M0 — Foundation
+## ✅ M0 — Foundation
 
-Get a reproducible environment and a green pipeline before any feature exists.
-Nothing after this milestone is trustworthy without it.
+`chore: bootstrap Django project with Docker stack and CI pipeline`
 
-| # | Commit | Contents | Status |
-| --- | --- | --- | --- |
-| M0.1 | `chore(docker): add development stack` | `docker-compose.yml` (web, Postgres 16, Redis 7), `Dockerfile`, `.env.example`, `Makefile` shortcuts | ⬜ |
-| M0.2 | `chore(ci): add Django project skeleton and pipeline` | `config/settings/{base,local,production}.py`, `django-environ` wiring, `ruff` + `pytest` + `coverage` config, `Jenkinsfile`, smoke test | ⬜ |
+Reproducible environment and a green pipeline before any feature exists. This is
+the one milestone that is pure infrastructure, because nothing after it is
+trustworthy without it.
 
-**Done when:** `docker compose up` serves Django, `pytest` runs green, `ruff check`
-is clean, and the Jenkins pipeline reproduces all three.
+- `docker-compose.yml` (web, Postgres 16, Redis 7) with healthchecks, `Dockerfile`,
+  `.env.example`, `Makefile`
+- `config/settings/{base,local,production}.py` with `django-environ`
+- `ruff`, `pytest`, `coverage` configured in `pyproject.toml`
+- `Jenkinsfile` running lint → test → coverage gate
+- Smoke test and `README.md` with setup instructions
 
----
-
-## M1 — Authentication
-
-JWT for the API, session-backed pages for the HTML views, and the first two cats
-on screen.
-
-| # | Commit | Contents | Status |
-| --- | --- | --- | --- |
-| M1.1 | `feat(auth): add JWT authentication` | Custom user model, `simplejwt` config, `/api/v1/auth/` (register, login, refresh), serializers, tests | ⬜ |
-| M1.2 | `feat(ui): add base layout and auth screens` | `base.html`, design tokens in `cats.css`, login/register templates using `catLogin.png` / `catRegister.png`, error pages for 400/401/404, tests | ⬜ |
-
-**Done when:** a user can register and log in from the browser and obtain a JWT
-from the API, and the error pages render their cats.
+**Done when:** `make up` serves Django, `make test` is green, `make lint` is clean,
+and Jenkins reproduces all three.
 
 ---
 
-## M2 — Ingestion
+## ⬜ M1 — Authentication and shell
 
-The entry point of the whole product. Everything downstream reads what this
-milestone writes, so the schema decision here ([ADR 0002](adr/0002-long-format-response-storage.md))
+`feat(auth): add JWT authentication and application shell`
+
+JWT for the API, session-backed pages for the HTML views, and the first cats on
+screen. Auth and layout ship together because a login page needs a layout and a
+layout without auth has nothing to protect.
+
+- Custom user model, `simplejwt`, `/api/v1/auth/` (register, login, refresh)
+- `base.html`, design tokens in `cats.css`, login and register screens
+  (`catLogin.png`, `catRegister.png`)
+- 400 / 401 / 404 error pages with their cats
+- Tests for the auth flows and the protected-route redirect
+
+**Done when:** a user registers and logs in from the browser, the API issues a JWT,
+and the error pages render.
+
+---
+
+## ⬜ M2 — Ingestion
+
+`feat(ingest): add survey dataset upload and parsing`
+
+The entry point of the product. Everything downstream reads what this milestone
+writes, so the schema decision ([ADR 0002](adr/0002-long-format-response-storage.md))
 matters more than the code.
 
-| # | Commit | Contents | Status |
-| --- | --- | --- | --- |
-| M2.1 | `feat(ingest): add dataset upload and parsing` | `Survey`, `Dataset`, `Question`, `Response` models + migrations, CSV/XLSX parser service, upload endpoint with validation, tests | ⬜ |
-| M2.2 | `feat(ingest): add question type inference and dataset versioning` | Type inference (categorical / ordinal / numeric / free text), re-upload creates a new dataset version, dataset detail view, tests | ⬜ |
+- `Survey`, `Dataset`, `Question`, `Response` models and migrations
+- CSV/XLSX parser service, upload endpoint with validation
+- Question type inference (categorical / ordinal / numeric / free text)
+- Dataset versioning on re-upload, dataset list and detail screens
+- Tests covering malformed files, mixed types, and version bumps
 
 **Done when:** uploading a real survey export produces typed questions and
 normalized responses, and re-uploading bumps the version instead of overwriting.
 
 ---
 
-## M3 — Descriptive layer
+## ⬜ M3 — Descriptive layer
 
-First layer of the engine, and the first thing a user actually sees as analysis.
+`feat(analytics): add descriptive analysis and dashboard`
 
-| # | Commit | Contents | Status |
-| --- | --- | --- | --- |
-| M3.1 | `feat(analytics): add descriptive engine` | `engine/descriptive.py` — distributions, participation rate, missing values; pure DataFrame in / dataclass out, unit tests with hand-computed values | ⬜ |
-| M3.2 | `feat(ui): add descriptive dashboard` | `/api/v1/datasets/<id>/descriptive/`, dashboard template, Chart.js rendering, empty state, tests | ⬜ |
+First layer of the engine and the first thing a user sees as analysis.
+
+- `engine/descriptive.py` — distributions, participation rate, missing values;
+  DataFrame in, dataclass out ([ADR 0001](adr/0001-framework-agnostic-analytics-engine.md))
+- Import-boundary test that fails if `engine/` imports Django
+- `/api/v1/datasets/<id>/descriptive/`, dashboard template, Chart.js rendering
+- Empty state with its cat
+- Unit tests with hand-computed expected values
 
 **Done when:** a user uploads a file and sees per-question distributions in the
 browser.
 
 ---
 
-## M4 — Relational layer
+## ⬜ M4 — Relational layer
+
+`feat(analytics): add relational analysis with async processing`
 
 The first genuinely expensive computation, so this is where Celery and the cache
 strategy get proven.
 
-| # | Commit | Contents | Status |
-| --- | --- | --- | --- |
-| M4.1 | `feat(analytics): add contingency and chi-square analysis` | `engine/relational.py` — contingency tables, chi-square with Cramér's V, segment comparison; unit tests against hand-computed values | ⬜ |
-| M4.2 | `feat(analytics): run relational analysis asynchronously` | Celery task, Redis cache keyed by dataset version, job status endpoint, polling UI, tests | ⬜ |
+- `engine/relational.py` — contingency tables, chi-square with Cramér's V,
+  segment comparison
+- Celery task, Redis cache keyed by dataset version, job status endpoint
+- Polling UI with a processing state
+- Tests for the statistics and for cache invalidation on re-upload
 
 **Done when:** requesting a correlation matrix returns immediately with a job id,
 the result is cached, and re-uploading the dataset invalidates it.
 
 ---
 
-## M5 — Pattern layer & insights
+## ⬜ M5 — Pattern layer
 
-The differentiator: this is what generic survey tools do not do.
+`feat(analytics): add respondent clustering and polarization detection`
 
-| # | Commit | Contents | Status |
-| --- | --- | --- | --- |
-| M5.1 | `feat(analytics): add respondent clustering` | `engine/patterns.py` — encoding, k-means with silhouette-based k selection, cluster profiling, tests | ⬜ |
-| M5.2 | `feat(analytics): add polarization detection` | Consensus vs. polarized scoring per question, tests | ⬜ |
-| M5.3 | `feat(insights): add plain-language insight generation` | Template-based narration of statistical results, ranking by relevance, insights panel in the UI, tests | ⬜ |
+- `engine/patterns.py` — encoding, k-means with silhouette-based k selection,
+  cluster profiling
+- Consensus vs. polarized scoring per question
+- Cluster and polarization views in the dashboard
+- Tests on synthetic datasets with known cluster structure
+
+**Done when:** the app groups respondents into profiles and flags which questions
+divide them.
+
+---
+
+## ⬜ M6 — Insight generation
+
+`feat(insights): add plain-language insight generation`
+
+The differentiator: what generic survey tools do not do.
+
+- Template-based narration of statistical results
+- Relevance ranking so the strongest findings surface first
+- Insights panel in the UI, linked to the numbers that produced each sentence
+- Tests asserting that generated sentences match the statistics behind them
 
 **Done when:** the app states findings in sentences a non-statistician can read,
-backed by the numbers that produced them.
+backed by the data that produced them.
 
 ---
 

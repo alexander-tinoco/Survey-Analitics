@@ -116,8 +116,28 @@ where that feature does its job?** If yes, it's the right size. If the change is
 getting hard to describe in two or three sentences, it has grown into a milestone —
 split it and get the split approved first.
 
+### Documentation travels with the work
+
+Docs are **not a commit**. A roadmap, an ADR, a README section, or a docstring ships
+inside the commit that contains the code it describes. Committing a document on its
+own inflates the history with entries nobody can review as work.
+
+- ❌ `docs: add architecture decision record for storage format`
+- ✅ `feat(ingest): add dataset upload and parsing` — *includes* the ADR that
+  justifies the schema, the README section, and the tests
+
+The only standalone `docs:` commit that is acceptable is one that fixes wrong or
+misleading documentation about code that already exists.
+
+The same applies to config and tooling: a linter rule, a CI tweak, or a dependency
+bump rides along with the change that needed it, unless it is genuinely
+self-contained infrastructure work (see M0 in the roadmap).
+
+### One commit, one reason to exist
+
 Each approved task ends in **its own commit**. No end-of-day mega-commits mixing
-unrelated features.
+unrelated features, and no commits so thin that the message is longer than the
+diff.
 
 ### Commit rules — read carefully
 
