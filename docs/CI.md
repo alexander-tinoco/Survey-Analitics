@@ -76,7 +76,37 @@ with a proper agent setup.
 
 ## Status
 
-The `Jenkinsfile` has not yet been executed against a running Jenkins server —
-it is written against the same commands the test suite uses locally, all of
-which pass, but the pipeline definition itself is unverified until someone
-completes the steps above and runs a build.
+Verified. The pipeline runs green end to end against a local Jenkins server:
+
+```
+✓ Checkout            ✓ Lint             (ruff check + format --check)
+✓ Prepare environment ✓ Test             387 passed, 99.57% coverage
+✓ Build               ✓ Engine coverage  219 passed, 100.00% coverage
+                                          7m 21s total
+```
+
+Getting there took seven builds, and every failure was a real problem rather
+than a quirk of the setup. Two of them were bugs in the application itself,
+invisible to local development:
+
+- **`/app` was not writable by the process that runs in it.** `WORKDIR`
+  creates the directory as root and `COPY --chown` only changes the files
+  inside it, so the unprivileged user could read its own source but write
+  nothing beside it. The bind mount used in development replaced `/app`
+  entirely, so the image's permissions were never exercised.
+- **The development bind mount broke CI.** Jenkins talks to the host's Docker
+  daemon, so a mount written as `.` resolves against the host filesystem
+  rather than the path inside the Jenkins container. `/app` came up empty and
+  the project was not importable. The compose file was split accordingly.
+
+The rest were setup: no docker client in the base image, no pipeline plugins
+without the setup wizard, a core too old for those plugins, local checkouts
+disabled by default, and git refusing the mounted repository as having
+"dubious ownership".
+
+That last one is worth recording, because the obvious fixes do not work.
+`git config --system` is not read by the process Jenkins spawns, and neither
+are `GIT_CONFIG_*` environment variables set on the container. The per-user
+config is what git actually reads there, so the image writes
+`safe.directory` into both `/root/.gitconfig` and
+`/var/jenkins_home/.gitconfig`.

@@ -82,15 +82,6 @@ services:
       JAVA_OPTS: >-
         -Djenkins.install.runSetupWizard=false
         -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
-      # The mounted repository belongs to the host user, so git refuses it as
-      # having "dubious ownership". Setting this in /etc/gitconfig is not
-      # enough: Jenkins spawns git with its own environment, and the helper
-      # process serving the local clone does not pick the system file up.
-      # Passed as environment variables instead, which every child process
-      # inherits.
-      GIT_CONFIG_COUNT: "1"
-      GIT_CONFIG_KEY_0: safe.directory
-      GIT_CONFIG_VALUE_0: "*"
     ports:
       - "${JENKINS_PORT:-8080}:8080"
     volumes:

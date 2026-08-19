@@ -36,9 +36,16 @@ RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 # The mounted workspace belongs to the host user, not to anyone inside this
 # container, and git refuses to operate on a repository it considers to have
-# "dubious ownership". That check protects against running hooks from a
-# repository someone else controls; here the repository is the developer's own
-# and the mount is read-only, so it is declared safe explicitly.
-RUN git config --system --add safe.directory /workspace
+# "dubious ownership". That check stops a repository someone else controls
+# from running its hooks against you; here the repository is the developer's
+# own and the mount is read-only, so it is declared safe.
+#
+# Written into both home directories rather than /etc/gitconfig: Jenkins
+# spawns git without inheriting the container's environment, and the process
+# that serves a local clone picked up neither the system file nor
+# GIT_CONFIG_* variables. The per-user config is the one it reads.
+RUN git config --global --add safe.directory "*" \
+    && HOME=/var/jenkins_home git config --global --add safe.directory "*" \
+    && chown jenkins:jenkins /var/jenkins_home/.gitconfig
 
 USER jenkins
