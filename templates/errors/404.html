@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block shell_modifier %} shell--narrow{% endblock %}
 {% block title %}404 — SurveyAnalytics{% endblock %}
 
 {% block content %}
-  <section class="cat-panel">
-    <img class="cat-panel__art" src="{% static 'img/cat404.png' %}" alt="A sad cat with teary eyes">
+  <section class="plate">
+    <img class="plate__art" src="{% static 'img/cat404.png' %}" alt="A sad cat with teary eyes">
     <h1>Nothing lives at this address</h1>
     <p>The page may have moved, or the link may have been wrong to begin with.</p>
-    <p class="cat-panel__hint">
-      <a class="btn" href="{% url 'home' %}">Back to safety</a>
-    </p>
+    <p><a class="btn" href="{% url 'home' %}">Back to safety</a></p>
   </section>
 {% endblock %}

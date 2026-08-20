@@ -1,20 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block shell_modifier %} shell--narrow{% endblock %}
 {% block title %}500 — SurveyAnalytics{% endblock %}
 
 {% block content %}
-  <section class="cat-panel">
+  <section class="plate">
     {# Reuses the 400 cat: no dedicated 500 illustration exists yet. #}
-    <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
-         alt="A cat looking apologetic">
+    <img class="plate__art" src="{% static 'img/cat400.png' %}" alt="A cat looking apologetic">
     <h1>That one is on us</h1>
-    <p>
-      Something broke on our side. The error has been logged; nothing you
-      uploaded was lost.
-    </p>
-    <p class="cat-panel__hint">
-      <a class="btn" href="{% url 'home' %}">Back to safety</a>
-    </p>
+    <p>Something broke on our side. The error has been logged; nothing you uploaded was lost.</p>
+    <p><a class="btn" href="{% url 'home' %}">Back to safety</a></p>
   </section>
 {% endblock %}

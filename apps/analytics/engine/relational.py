@@ -125,16 +125,30 @@ class Association:
         return Strength.STRONG
 
 
-def cross_tabulate(rows: pd.Series, columns: pd.Series) -> ContingencyTable:
+def cross_tabulate(
+    rows: pd.Series,
+    columns: pd.Series,
+    row_scale: list[str] | None = None,
+    column_scale: list[str] | None = None,
+) -> ContingencyTable:
     """Cross-tabulate two answer columns, dropping respondents missing either.
 
     Pairwise deletion: a respondent who skipped one of the two questions
     cannot contribute to their relationship, but still counts toward every
     other pair. Dropping them from the whole dataset instead would shrink
     every analysis to the people who answered everything.
+
+    Ordinal answers are laid out in scale order. crosstab sorts labels
+    alphabetically, which puts "Muy de acuerdo" between "En desacuerdo" and
+    "Neutral" — a table whose columns run in an order nobody was asked the
+    question in, and which hides the diagonal that makes a relationship
+    visible at a glance.
     """
     paired = pd.DataFrame({"row": rows, "column": columns}).dropna()
     table = pd.crosstab(paired["row"], paired["column"])
+
+    table = table.reindex(index=_ordered(table.index, row_scale))
+    table = table.reindex(columns=_ordered(table.columns, column_scale))
 
     return ContingencyTable(
         row_labels=[str(label) for label in table.index],
@@ -143,8 +157,30 @@ def cross_tabulate(rows: pd.Series, columns: pd.Series) -> ContingencyTable:
     )
 
 
+def _ordered(labels: pd.Index, scale: list[str] | None) -> list:
+    """Lay labels out in scale order, keeping any the scale does not name.
+
+    Unexpected answers are appended rather than dropped: an answer outside
+    the scale is still a respondent, and silently removing it would change
+    the totals the table reports.
+    """
+    if not scale:
+        return list(labels)
+
+    position = {point.lower(): index for index, point in enumerate(scale)}
+    known = [label for label in labels if str(label).lower() in position]
+    unknown = [label for label in labels if str(label).lower() not in position]
+
+    return sorted(known, key=lambda label: position[str(label).lower()]) + unknown
+
+
 def associate(
-    row_question: str, column_question: str, rows: pd.Series, columns: pd.Series
+    row_question: str,
+    column_question: str,
+    rows: pd.Series,
+    columns: pd.Series,
+    row_scale: list[str] | None = None,
+    column_scale: list[str] | None = None,
 ) -> Association | None:
     """Measure the association between two questions.
 
@@ -152,7 +188,7 @@ def associate(
     answer has no variation, and a table with one row or column has no
     relationship to measure.
     """
-    table = cross_tabulate(rows, columns)
+    table = cross_tabulate(rows, columns, row_scale, column_scale)
 
     if len(table.row_labels) < 2 or len(table.column_labels) < 2:
         return None
@@ -177,13 +213,18 @@ def associate(
     )
 
 
-def analyze(frame: pd.DataFrame, question_types: dict[str, str]) -> list[Association]:
+def analyze(
+    frame: pd.DataFrame,
+    question_types: dict[str, str],
+    scales: dict[str, list[str]] | None = None,
+) -> list[Association]:
     """Measure every testable pair of questions in a dataset.
 
     Results come back strongest first, and their p-values are corrected
     together — the correction is only meaningful across the whole family of
     tests, which is why pairs cannot be analyzed one at a time.
     """
+    scales = scales or {}
     testable = [
         column for column in frame.columns if question_types.get(str(column)) in TESTABLE_TYPES
     ]
@@ -198,6 +239,8 @@ def analyze(frame: pd.DataFrame, question_types: dict[str, str]) -> list[Associa
                 str(column_question),
                 frame[row_question],
                 frame[column_question],
+                scales.get(str(row_question)),
+                scales.get(str(column_question)),
             )
         )
         is not None

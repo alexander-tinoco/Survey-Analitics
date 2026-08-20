@@ -6,7 +6,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import Client
-from django.urls import reverse
 
 from apps.analytics.services import patterns, relational
 from apps.analytics.services.jobs import JobStatus
@@ -109,96 +108,3 @@ class TestJobLifecycle:
         grouped_dataset.delete()
 
         assert compute_pattern_analysis(dataset_id) == 0
-
-
-class TestPatternViews:
-    def test_the_page_requires_login(self, client: Client, grouped_dataset: object) -> None:
-        response = client.get(reverse("analytics:patterns", args=[grouped_dataset.pk]))
-
-        assert response.status_code == 302
-
-    def test_another_users_dataset_is_not_reachable(
-        self, client: Client, grouped_dataset: object
-    ) -> None:
-        intruder = User.objects.create_user(email="other@example.com", password="correct-horse")
-        client.force_login(intruder)
-
-        response = client.get(reverse("analytics:patterns", args=[grouped_dataset.pk]))
-
-        assert response.status_code == 404
-
-    def test_a_first_visit_shows_the_working_state(
-        self, logged_in: Client, grouped_dataset: object
-    ) -> None:
-        with patch("apps.analytics.tasks.compute_pattern_analysis.delay"):
-            content = logged_in.get(
-                reverse("analytics:patterns", args=[grouped_dataset.pk])
-            ).content.decode()
-
-        assert "Looking for groups" in content
-        assert "data-poll-url" in content
-
-    def test_finished_analysis_describes_each_group(
-        self, logged_in: Client, grouped_dataset: object
-    ) -> None:
-        """A group is only useful if it can be described in answers."""
-        patterns.compute_and_cache(grouped_dataset.pk)
-
-        content = logged_in.get(
-            reverse("analytics:patterns", args=[grouped_dataset.pk])
-        ).content.decode()
-
-        assert "Profile 1" in content
-        assert "Times more likely" in content
-        assert "Support" in content
-
-    def test_results_carry_no_cats(self, logged_in: Client, grouped_dataset: object) -> None:
-        patterns.compute_and_cache(grouped_dataset.pk)
-
-        content = logged_in.get(
-            reverse("analytics:patterns", args=[grouped_dataset.pk])
-        ).content.decode()
-
-        assert "cat-panel__art" not in content
-
-    def test_the_api_answers_202_while_working_and_200_when_ready(
-        self, logged_in: Client, grouped_dataset: object
-    ) -> None:
-        with patch("apps.analytics.tasks.compute_pattern_analysis.delay"):
-            working = logged_in.get(reverse("analytics_api:patterns", args=[grouped_dataset.pk]))
-        assert working.status_code == 202
-
-        patterns.compute_and_cache(grouped_dataset.pk)
-        ready = logged_in.get(reverse("analytics_api:patterns", args=[grouped_dataset.pk]))
-
-        assert ready.status_code == 200
-        assert ready.json()["clusters"]["found_structure"] is True
-
-    def test_absence_of_groups_is_explained_not_hidden(
-        self, logged_in: Client, survey: object, csv_file: bytes
-    ) -> None:
-        """Refusing to invent groups is a finding, and the page has to say so
-        or it reads as a broken analysis.
-        """
-        small = ingest(survey, parse_upload(csv_file, "small.csv"))
-        patterns.compute_and_cache(small.pk)
-
-        content = logged_in.get(reverse("analytics:patterns", args=[small.pk])).content.decode()
-
-        assert "No distinct respondent groups" in content
-        assert "Too few respondents" in content
-
-    def test_the_page_explains_polarized_versus_divided(
-        self, logged_in: Client, grouped_dataset: object
-    ) -> None:
-        """The distinction is the whole point of the measure, and it is not
-        self-evident from the word alone.
-        """
-        patterns.compute_and_cache(grouped_dataset.pk)
-
-        content = logged_in.get(
-            reverse("analytics:patterns", args=[grouped_dataset.pk])
-        ).content.decode()
-
-        assert "two camps" in content
-        assert "has not settled" in content

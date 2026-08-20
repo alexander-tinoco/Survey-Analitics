@@ -29,3 +29,11 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# Agent tooling. Reinstallable with `npx impeccable install`, so the skill's
+# own files are not project source. PRODUCT.md and DESIGN.md are, and are
+# committed at the repository root.
+.claude/skills/
+.claude/settings.local.json
+.claude/RESUME.md
+.impeccable/

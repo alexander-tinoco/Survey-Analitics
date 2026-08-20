@@ -4,38 +4,59 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}SurveyAnalytics{% endblock %}</title>
-  <meta name="description" content="{% block description %}Turn survey responses into readable findings.{% endblock %}">
+  <meta name="description" content="{% block description %}Survey analysis that withholds a finding until the data supports it.{% endblock %}">
   <link rel="icon" href="{% static 'img/catHomePage.png' %}">
-  <link rel="stylesheet" href="{% static 'css/cats.css' %}">
+  <link rel="preload" as="font" type="font/woff2" href="{% static 'fonts/archivo-variable.woff2' %}" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="{% static 'fonts/roboto-mono-variable.woff2' %}" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/record.css' %}">
 </head>
 <body>
-  <header class="site-header">
-    <a class="site-header__brand" href="{% url 'home' %}">
-      <img src="{% static 'img/catHomePage.png' %}" alt="">
-      SurveyAnalytics
-    </a>
-    <nav class="site-nav">
+<!--
+THESIS: A bound record, not a dashboard. Findings are numbered entries with
+their evidence attached; the refusal to report is written down with the same
+care as a result. Refuses the KPI-card grid this category always ships.
+OWN-WORLD: Engineering-paper ground on a 24px rule, ink near-black, mint as a
+countersignature, correction red reserved for actions that commit. Archivo for
+prose, Roboto Mono for every figure. Hairline rules, 2px radii, no cards.
+STORY: The analyst arrives with a file, leaves with a sentence they can defend
+and the table behind it.
+FIRST VIEWPORT: Ruled entry header naming the record; finding 01 at headline
+scale beneath it; the margin index states which part is being read.
+FORM: The Bound Record, candidate 6 of 7, seed ad7de20a.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+-->
+  <header class="masthead">
+    <a class="masthead__mark" href="{% url 'home' %}">SurveyAnalytics</a>
+    <nav class="masthead__nav">
       {% if user.is_authenticated %}
-        <a href="{% url 'surveys:list' %}">Surveys</a>
-        <span class="site-nav__user">{{ user.short_name }}</span>
-        {# Logout is a POST: a GET link could be triggered by a prefetch. #}
+        <a href="{% url 'surveys:list' %}">Records</a>
+        <span class="masthead__who">{{ user.short_name }}</span>
+        {# POST-only: a GET logout can be fired by a prefetch. #}
         <form method="post" action="{% url 'accounts:logout' %}">
           {% csrf_token %}
-          <button class="btn btn--ghost" type="submit">Log out</button>
+          <button class="btn btn--quiet btn--small" type="submit">Sign out</button>
         </form>
       {% else %}
-        <a class="btn btn--ghost" href="{% url 'accounts:login' %}">Log in</a>
-        <a class="btn" href="{% url 'accounts:register' %}">Sign up</a>
+        <a href="{% url 'accounts:login' %}">Sign in</a>
+        <a class="btn btn--small" href="{% url 'accounts:register' %}">Create account</a>
       {% endif %}
     </nav>
   </header>
 
-  <main class="site-main">
+  <main class="shell{% block shell_modifier %}{% endblock %}">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="notice">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="site-footer">
-    <p>SurveyAnalytics — the analysis your survey tool stopped short of.</p>
+  <footer class="colophon">
+    SurveyAnalytics — findings are withheld until the data supports them
   </footer>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

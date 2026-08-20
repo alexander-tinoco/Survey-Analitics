@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ dataset.survey.name }} v{{ dataset.version }} — SurveyAnalytics{% endblock %}
+
+{% block content %}
+  <header class="entry-head">
+    <p class="entry-meta">
+      <a href="{% url 'surveys:list' %}">Records</a>
+      
+      <a href="{{ dataset.survey.get_absolute_url }}">{{ dataset.survey.name }}</a>
+      
+      <span>Version {{ dataset.version }}</span>
+      <span>{{ dataset.respondent_count }} respondents</span>
+      <span>{{ dataset.question_count }} questions</span>
+      <span>Ingested {{ dataset.uploaded_at|date:"j M Y" }}</span>
+    </p>
+
+    <div class="entry-head__title">
+      <div>
+        <h1>{{ dataset.survey.name }}</h1>
+        <p class="entry-head__lede">{{ dataset.source_filename }}</p>
+      </div>
+      <div class="actions">
+        {% if dataset.source_file %}
+          <a class="btn btn--quiet btn--small" href="{% url 'surveys:dataset_file' dataset.pk %}">Original file</a>
+        {% endif %}
+        {% if record.is_complete and record.has_anything_to_report %}
+          <a class="btn btn--small" href="{% url 'analytics:insights_export' dataset.pk 'csv' %}">Export CSV</a>
+          <a class="btn btn--small" href="{% url 'analytics:insights_export' dataset.pk 'json' %}">Export JSON</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  {% if not record.is_complete %}
+    <p class="notice" data-poll-url="{% url 'analytics_api:insights' dataset.pk %}">
+      Still computing {{ record.pending_layers|join:" and " }}. Everything below is
+      what the finished layers found; this page updates itself when the rest lands.
+      <span role="status" aria-live="polite"> Working…</span>
+    </p>
+  {% endif %}
+
+  <div class="record">
+    <nav class="index" aria-label="Sections of this record">
+      <ol>
+        <li><a href="#findings" data-index-link>Findings <span class="index__count num">{{ record.insights|length }}</span></a></li>
+        <li><a href="#distributions" data-index-link>Distributions <span class="index__count num">{{ record.summary.questions }}</span></a></li>
+        <li><a href="#relationships" data-index-link>Relationships <span class="index__count num">{{ record.significant_associations|length }}</span></a></li>
+        <li><a href="#groups" data-index-link>Groups <span class="index__count num">{{ groups|length }}</span></a></li>
+      </ol>
+    </nav>
+
+    <div>
+      {# ---------------- Findings ---------------- #}
+      <section id="findings" tabindex="-1">
+        <div class="section__head">
+          <h2>Findings</h2>
+          {% if record.is_complete %}
+            <span class="stamp stamp--recorded">Recorded</span>
+          {% else %}
+            <span class="stamp stamp--pending">Partial</span>
+          {% endif %}
+        </div>
+
+        {% if record.insights %}
+          <p class="section__note">
+            Ordered by how much they matter: how strong the pattern is, and how
+            many respondents it covers.
+          </p>
+          <ol class="findings">
+            {% for insight in findings %}
+              <li class="finding">
+                <span class="finding__index" aria-hidden="true"></span>
+                <div class="finding__body">
+                  <p class="finding__text">{{ insight.text }}</p>
+                  <p class="finding__apparatus">
+                    <span class="stamp stamp--{{ insight.kind }}">{{ insight.kind }}</span>
+                    {% for question in insight.questions %}<span>{{ question }}</span>{% endfor %}
+                  </p>
+                  <details class="finding__disclose">
+                    <summary>The figures behind this</summary>
+                    <div class="finding__evidence">
+                      <dl>
+                        {% for key, value in insight.evidence.items %}
+                          <div>
+                            <dt>{{ key|cut:"_"|title }}</dt>
+                            <dd>{{ value }}</dd>
+                          </div>
+                        {% endfor %}
+                      </dl>
+                    </div>
+                  </details>
+                </div>
+              </li>
+            {% endfor %}
+          </ol>
+          <p class="table-note">
+            Anything that failed its statistical assumptions, or that survives
+            only before correcting for the number of comparisons made, is left
+            out entirely.
+          </p>
+
+        {% elif record.is_complete %}
+          {% comment %}
+            Silence is the product's most characteristic answer. It gets the
+            weight of a finding, not the greyness of an empty state.
+          {% endcomment %}
+          <div class="withheld">
+            <h2>Nothing stands out</h2>
+            <p>
+              No relationship, group or split in this dataset is strong enough
+              to report with confidence. The answers vary individually rather
+              than in patterns.
+            </p>
+            <p>
+              That is a result, not a failure to compute. The distributions
+              below are still worth reading.
+            </p>
+          </div>
+        {% else %}
+          <p class="section__note">Findings appear here as the layers below finish.</p>
+        {% endif %}
+      </section>
+
+      {# ---------------- Distributions ---------------- #}
+      <section id="distributions" class="section" tabindex="-1">
+        <div class="section__head">
+          <h2>Distributions</h2>
+          <span class="stamp stamp--recorded">Recorded</span>
+        </div>
+
+        <ul class="readings">
+          <li>
+            <span class="reading__value num">{{ record.summary.respondents }}</span>
+            <span class="reading__label">Respondents</span>
+          </li>
+          <li>
+            <span class="reading__value num">{{ record.summary.questions }}</span>
+            <span class="reading__label">Questions</span>
+          </li>
+          <li>
+            <span class="reading__value num">{{ record.summary.overall_response_rate }}%</span>
+            <span class="reading__label">Answered</span>
+          </li>
+        </ul>
+
+        {% with skipped=record.summary.lowest_response_rate %}
+          {% if skipped and skipped.response_rate < 100 %}
+            <p class="notice notice--flag">
+              <strong>{{ skipped.text }}</strong> was answered by
+              <span class="num">{{ skipped.response_rate }}%</span> of respondents,
+              the least of any question. Its results describe
+              <span class="num">{{ skipped.answered }}</span> people, not all
+              <span class="num">{{ record.summary.respondents }}</span>.
+            </p>
+          {% endif %}
+        {% endwith %}
+
+        {% for distribution in distributions %}
+          <article class="section" style="border-top-color: var(--rule);">
+            <div class="section__head">
+              <h3>{{ distribution.text }}</h3>
+              <span class="stamp stamp--{{ distribution.type }}">{{ distribution.type }}</span>
+            </div>
+            <p class="finding__apparatus">
+              <span class="num">{{ distribution.answered }}</span> answered
+              
+              <span class="num">{{ distribution.missing }}</span> skipped
+              
+              <span class="num">{{ distribution.response_rate }}%</span> response rate
+            </p>
+
+            {% if distribution.numeric %}
+              <ul class="readings">
+                <li><span class="reading__value num">{{ distribution.numeric.mean }}</span><span class="reading__label">Mean</span></li>
+                <li><span class="reading__value num">{{ distribution.numeric.median }}</span><span class="reading__label">Median</span></li>
+                <li><span class="reading__value num">{{ distribution.numeric.std_dev }}</span><span class="reading__label">Std. deviation</span></li>
+                <li><span class="reading__value num">{{ distribution.numeric.minimum }}–{{ distribution.numeric.maximum }}</span><span class="reading__label">Range</span></li>
+              </ul>
+              {% if distribution.numeric.is_skewed %}
+                <p class="notice">
+                  The mean ({{ distribution.numeric.mean }}) sits well away from the
+                  median ({{ distribution.numeric.median }}): a few extreme answers are
+                  pulling the average, so the median describes a typical respondent better.
+                </p>
+              {% endif %}
+
+            {% elif distribution.counts %}
+              <div class="chart">
+                <canvas data-chart="{{ distribution.position }}" role="img"
+                        aria-label="Distribution of answers to {{ distribution.text }}"></canvas>
+              </div>
+              {% comment %}
+                The table is the accessible equivalent of the chart, not an
+                extra: a canvas is opaque to a screen reader.
+              {% endcomment %}
+              <div class="table-wrap">
+                <table>
+                  <caption class="visually-hidden">Answers to {{ distribution.text }}</caption>
+                  <thead>
+                    <tr><th scope="col">Answer</th><th scope="col">Count</th><th scope="col">Share</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for count in distribution.counts %}
+                      <tr>
+                        <th scope="row" class="cell-label">{{ count.value }}</th>
+                        <td class="num">{{ count.count }}</td>
+                        <td class="num">{{ count.percentage }}%</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <p class="table-note">No answers to summarize.</p>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </section>
+
+      {# ---------------- Relationships ---------------- #}
+      <section id="relationships" class="section" tabindex="-1">
+        <div class="section__head">
+          <h2>Relationships</h2>
+          {% if record.relational.is_ready %}
+            <span class="stamp stamp--recorded">Recorded</span>
+          {% else %}
+            <span class="stamp stamp--pending">Computing</span>
+          {% endif %}
+        </div>
+
+        {% if record.relational.is_ready %}
+          {% if associations %}
+            <p class="section__note">
+              <span class="num">{{ record.significant_associations|length }}</span> of
+              <span class="num">{{ associations|length }}</span> question pairs show a
+              relationship stronger than chance. Percentages are shares of each row, so
+              rows can be compared even when they hold different numbers of respondents.
+            </p>
+
+            {% for association in associations %}
+              <article class="section" style="border-top-color: var(--rule);">
+                <div class="section__head">
+                  <h3>{{ association.row_question }} × {{ association.column_question }}</h3>
+                  {% if association.is_significant %}
+                    <span class="stamp stamp--recorded">{{ association.strength }}</span>
+                  {% else %}
+                    <span class="stamp stamp--withheld">Withheld</span>
+                  {% endif %}
+                </div>
+                <p class="finding__apparatus">
+                  <span class="num">{{ association.respondents }}</span> answered both
+                  χ² <span class="num">{{ association.chi_square }}</span>
+                  Cramér's V <span class="num">{{ association.cramers_v }}</span>
+                  adjusted p <span class="num">{{ association.adjusted_p_display }}</span>
+                </p>
+
+                {% if not association.is_reliable %}
+                  <p class="notice notice--flag">
+                    Too few respondents in some combinations for this test to be
+                    trustworthy. The table is accurate; the p-value is not.
+                  </p>
+                {% endif %}
+
+                <div class="table-wrap">
+                  <table>
+                    <caption class="visually-hidden">
+                      {{ association.row_question }} by {{ association.column_question }}
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ association.row_question }}</th>
+                        {% for label in association.table.column_labels %}
+                          <th scope="col">{{ label }}</th>
+                        {% endfor %}
+                        <th scope="col">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in association.table.rows %}
+                        <tr>
+                          <th scope="row" class="cell-label">{{ row.label }}</th>
+                          {% for cell in row.cells %}
+                            <td>
+                              <span class="num">{{ cell.count }}</span>
+                              <span class="cell-share num">{{ cell.percentage }}%</span>
+                            </td>
+                          {% endfor %}
+                          <td class="num">{{ row.total }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            {% endfor %}
+          {% else %}
+            <p class="section__note">
+              This dataset needs at least two categorical or ordinal questions to
+              cross-tabulate. Numeric and free-text answers have no categories to compare.
+            </p>
+          {% endif %}
+        {% else %}
+          <p class="section__note">
+            Comparing every pair of questions. This runs on a worker because the
+            work grows with the square of the question count.
+          </p>
+        {% endif %}
+      </section>
+
+      {# ---------------- Groups ---------------- #}
+      <section id="groups" class="section" tabindex="-1">
+        <div class="section__head">
+          <h2>Groups</h2>
+          {% if record.patterns.is_ready %}
+            <span class="stamp stamp--recorded">Recorded</span>
+          {% else %}
+            <span class="stamp stamp--pending">Computing</span>
+          {% endif %}
+        </div>
+
+        {% if record.patterns.is_ready %}
+          {% if groups %}
+            <p class="section__note">
+              <span class="num">{{ groups|length }}</span> distinct profiles among
+              <span class="num">{{ clusters.respondents_clustered }}</span> respondents,
+              each described by the answers that set it apart from everyone else.
+            </p>
+            {% for group in groups %}
+              <article class="section" style="border-top-color: var(--rule);">
+                <div class="section__head">
+                  <h3>Profile {{ forloop.counter }}</h3>
+                  <span class="stamp stamp--pending">
+                    {{ group.size }} people · {{ group.share }}%
+                  </span>
+                </div>
+                {% if group.characteristics %}
+                  <div class="table-wrap">
+                    <table>
+                      <caption class="visually-hidden">Answers distinguishing profile {{ forloop.counter }}</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Question</th><th scope="col">Answer</th>
+                          <th scope="col">In profile</th><th scope="col">Overall</th>
+                          <th scope="col">Times likelier</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for characteristic in group.characteristics %}
+                          <tr>
+                            <th scope="row" class="cell-label">{{ characteristic.question }}</th>
+                            <td class="cell-label">{{ characteristic.answer }}</td>
+                            <td class="num">{{ characteristic.group_share }}%</td>
+                            <td class="num">{{ characteristic.overall_share }}%</td>
+                            <td class="num">{{ characteristic.lift }}×</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% else %}
+                  <p class="table-note">
+                    This profile holds together statistically but no single answer
+                    sets it apart clearly enough to describe.
+                  </p>
+                {% endif %}
+              </article>
+            {% endfor %}
+          {% else %}
+            <div class="withheld">
+              <h2>No distinct groups</h2>
+              <p>{{ clusters.rejection_reason }}</p>
+            </div>
+          {% endif %}
+
+          {% if opinions %}
+            <h3 style="margin-top: 2rem;">Consensus and division</h3>
+            <div class="table-wrap">
+              <table>
+                <caption class="visually-hidden">How divided respondents are per question</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Question</th><th scope="col">Verdict</th>
+                    <th scope="col">Largest answer</th><th scope="col">At the extremes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for opinion in opinions %}
+                    <tr>
+                      <th scope="row" class="cell-label">{{ opinion.question }}</th>
+                      <td class="cell-label">
+                        <span class="stamp stamp--{% if opinion.verdict == 'polarized' %}withheld{% elif opinion.verdict == 'consensus' %}recorded{% else %}pending{% endif %}">{{ opinion.verdict }}</span>
+                      </td>
+                      <td class="num">{{ opinion.modal_share }}%</td>
+                      <td class="num">{% if opinion.extreme_share is None %}—{% else %}{{ opinion.extreme_share }}%{% endif %}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <p class="table-note">
+              <strong>Polarized</strong> means answers pile up at both ends and avoid
+              the middle — a population in two camps. <strong>Divided</strong> means
+              they spread evenly, which is a population that has not settled rather
+              than one in conflict.
+            </p>
+          {% endif %}
+        {% else %}
+          <p class="section__note">
+            Grouping respondents by how similarly they answered, then checking
+            whether the grouping holds up against chance.
+          </p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ chart_data|json_script:"chart-data" }}
+  <script src="{% static 'js/vendor/chart.umd.js' %}"></script>
+  <script src="{% static 'js/charts.js' %}"></script>
+  <script src="{% static 'js/record.js' %}"></script>
+  {% if not record.is_complete %}<script src="{% static 'js/poll.js' %}"></script>{% endif %}
+{% endblock %}

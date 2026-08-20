@@ -1,4 +1,4 @@
-.PHONY: help build up down logs worker-logs worker-reload shell test test-engine lint format migrate superuser ci-up ci-down ci-logs clean
+.PHONY: help build up down logs worker-logs worker-reload shell test test-engine lint format migrate demo superuser ci-up ci-down ci-logs clean
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -44,6 +44,9 @@ format:  ## Apply formatting and fix what can be fixed
 
 migrate:  ## Apply database migrations
 	docker compose run --rm web python manage.py migrate
+
+demo:  ## Create the demo account and load the sample surveys
+	docker compose run --rm web python manage.py load_demo
 
 superuser:  ## Create an admin user
 	docker compose run --rm web python manage.py createsuperuser

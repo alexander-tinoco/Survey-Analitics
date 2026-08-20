@@ -1,33 +1,22 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block shell_modifier %} shell--narrow{% endblock %}
 {% block title %}Delete {{ survey.name }}?{% endblock %}
 
 {% block content %}
-  <section class="cat-panel">
-    <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+  <section class="plate">
+    <img class="plate__art" src="{% static 'img/cat400.png' %}"
          alt="A cat asking whether you are sure">
     <h1>Delete “{{ survey.name }}”?</h1>
+    <p>This removes the survey and <strong class="num">{{ survey.datasets.count }}</strong> upload{{ survey.datasets.count|pluralize }}, with every response, question and analysis stored under it.</p>
+    <p><strong class="strike">This cannot be undone.</strong></p>
 
-    {# Spells out what goes, rather than a generic "are you sure": for a
-       large survey this is tens of thousands of rows and cannot be undone. #}
-    <p>
-      This removes the survey and
-      <strong>{{ survey.datasets.count }}</strong>
-      upload{{ survey.datasets.count|pluralize }}, along with every response,
-      question and analysis stored under it.
-    </p>
-    <p><strong>This cannot be undone.</strong></p>
-
-    <form method="post" class="cat-panel__card">
+    <form class="sheet" method="post">
       {% csrf_token %}
-      <button class="btn btn--block btn--danger" type="submit">
-        Yes, delete everything
-      </button>
+      <button class="btn btn--commit btn--block" type="submit">Delete everything</button>
     </form>
 
-    <p class="cat-panel__hint">
-      <a href="{{ survey.get_absolute_url }}">Keep it, take me back</a>
-    </p>
+    <p class="plate__aside"><a href="{{ survey.get_absolute_url }}">Keep it, take me back</a></p>
   </section>
 {% endblock %}

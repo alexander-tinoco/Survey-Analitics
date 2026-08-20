@@ -12,92 +12,9 @@ from django.views.generic import DetailView
 from apps.surveys.models import Dataset
 
 from . import exports
-from .presenters import summary_to_dict
+from .presenters import distribution_to_dict, summary_to_dict
 from .services import insights, patterns, relational
-from .services.descriptive import describe
-
-
-class DescriptiveDashboardView(LoginRequiredMixin, DetailView):
-    """Show the descriptive analysis of one dataset."""
-
-    model = Dataset
-    template_name = "analytics/dashboard.html"
-    context_object_name = "dataset"
-
-    def get_queryset(self) -> QuerySet:
-        # Ownership is enforced in the queryset, so someone else's dataset id
-        # is a 404 rather than a readable page.
-        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        summary = describe(self.object)
-
-        context["summary"] = summary
-        # Serialized into the page rather than fetched over a second request:
-        # the data is already computed, and a fetch would only add a spinner.
-        context["chart_data"] = summary_to_dict(summary)
-        return context
-
-
-class RelationalDashboardView(LoginRequiredMixin, DetailView):
-    """Show the relational analysis, queueing it if it has not run yet."""
-
-    model = Dataset
-    template_name = "analytics/relational.html"
-    context_object_name = "dataset"
-
-    def get_queryset(self) -> QuerySet:
-        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        # Requesting rather than reading: a first visit should start the work
-        # instead of showing an empty page with no explanation.
-        report = relational.request_analysis(self.object)
-
-        context["report"] = report
-        context["associations"] = [relational.association_to_dict(a) for a in report.associations]
-        context["significant_count"] = len(report.significant)
-        return context
-
-
-class PatternDashboardView(LoginRequiredMixin, DetailView):
-    """Show respondent groups and question polarization."""
-
-    model = Dataset
-    template_name = "analytics/patterns.html"
-    context_object_name = "dataset"
-
-    def get_queryset(self) -> QuerySet:
-        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        report = patterns.request_analysis(self.object)
-
-        context["report"] = report
-        context["rendered"] = patterns.report_to_dict(report)
-        return context
-
-
-class InsightsView(LoginRequiredMixin, DetailView):
-    """The readable findings for a dataset — what the product is for."""
-
-    model = Dataset
-    template_name = "analytics/insights.html"
-    context_object_name = "dataset"
-
-    def get_queryset(self) -> QuerySet:
-        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        report = insights.build(self.object)
-
-        context["report"] = report
-        context["rendered"] = insights.report_to_dict(report)
-        return context
+from .services import record as record_service
 
 
 class InsightsExportView(LoginRequiredMixin, DetailView):
@@ -140,3 +57,40 @@ class InsightsExportView(LoginRequiredMixin, DetailView):
 
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+
+class RecordView(LoginRequiredMixin, DetailView):
+    """One dataset as a single readable record.
+
+    Replaces four separate analysis pages. They forced the reader to know
+    which layer answered which question before they could look anything up,
+    and gave no way to tell where in the analysis they were.
+    """
+
+    model = Dataset
+    template_name = "analytics/record.html"
+    context_object_name = "dataset"
+
+    def get_queryset(self) -> QuerySet:
+        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        built = record_service.build(self.object)
+        clusters = built.patterns.clusters
+
+        context["record"] = built
+        context["findings"] = [insights.insight_to_dict(i) for i in built.insights]
+        context["distributions"] = [distribution_to_dict(d) for d in built.summary.distributions]
+        context["associations"] = [
+            relational.association_to_dict(a) for a in built.relational.associations
+        ]
+        context["clusters"] = clusters
+        context["groups"] = [
+            patterns.group_to_dict(g) for g in (clusters.groups if clusters else [])
+        ]
+        context["opinions"] = [patterns.opinion_to_dict(o) for o in built.patterns.opinions]
+        # Charts read the same serialized summary the tables render from, so a
+        # bar can never disagree with the row beside it.
+        context["chart_data"] = summary_to_dict(built.summary)
+        return context

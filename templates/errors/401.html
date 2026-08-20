@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block shell_modifier %} shell--narrow{% endblock %}
 {% block title %}401 — SurveyAnalytics{% endblock %}
 
 {% block content %}
-  <section class="cat-panel">
-    <img class="cat-panel__art" src="{% static 'img/cat401.png' %}" alt="A cat guarding a door">
-    <h1>This part needs a login</h1>
-    <p>The page exists, but it belongs to an account. Log in and we will take you there.</p>
-    <p class="cat-panel__hint">
-      <a class="btn" href="{% url 'home' %}">Back to safety</a>
-    </p>
+  <section class="plate">
+    <img class="plate__art" src="{% static 'img/cat401.png' %}" alt="A cat guarding a door">
+    <h1>This part needs a sign-in</h1>
+    <p>The page exists, but it belongs to an account. Sign in and we will take you there.</p>
+    <p><a class="btn" href="{% url 'home' %}">Back to safety</a></p>
   </section>
 {% endblock %}

@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Sign up — SurveyAnalytics{% endblock %}
+{% block shell_modifier %} shell--narrow{% endblock %}
+{% block title %}Create account — SurveyAnalytics{% endblock %}
 
 {% block content %}
-  <section class="cat-panel">
-    <img class="cat-panel__art" src="{% static 'img/catRegister.png' %}"
-         alt="A cat holding the door open">
+  <section class="plate">
+    <img class="plate__art" src="{% static 'img/catRegister.png' %}" alt="A cat holding the door open">
     <h1>Create your account</h1>
-
-    <form class="cat-panel__card" method="post">
+    <form class="sheet" method="post">
       {% csrf_token %}
       {% if form.non_field_errors %}
         <ul class="form-errors">
@@ -17,11 +16,8 @@
         </ul>
       {% endif %}
       {% for field in form %}{% include "_form_field.html" %}{% endfor %}
-      <button class="btn btn--block" type="submit">Sign up</button>
+      <button class="btn btn--commit btn--block" type="submit">Create account</button>
     </form>
-
-    <p class="cat-panel__hint">
-      Already have one? <a href="{% url 'accounts:login' %}">Log in</a>.
-    </p>
+    <p class="plate__aside">Already have one? <a href="{% url 'accounts:login' %}">Sign in</a>.</p>
   </section>
 {% endblock %}

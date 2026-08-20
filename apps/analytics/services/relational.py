@@ -40,7 +40,7 @@ class RelationalReport:
 def _compute(dataset: Dataset) -> list[Association]:
     """Cross-tabulate every testable pair of questions."""
     response_frame = load(dataset)
-    return analyze(response_frame.frame, response_frame.question_types)
+    return analyze(response_frame.frame, response_frame.question_types, response_frame.scales)
 
 
 def _enqueue(dataset_id: int) -> None:
@@ -92,6 +92,7 @@ def association_to_dict(association: Association) -> dict[str, Any]:
         "chi_square": association.chi_square,
         "p_value": round(association.p_value, 6),
         "adjusted_p_value": association.adjusted_p_value,
+        "adjusted_p_display": _format_p(association.adjusted_p_value),
         "degrees_of_freedom": association.degrees_of_freedom,
         "cramers_v": association.cramers_v,
         "strength": str(association.strength),
@@ -100,6 +101,20 @@ def association_to_dict(association: Association) -> dict[str, Any]:
         "is_significant": association.is_significant,
         "table": _table_to_dict(association.table),
     }
+
+
+# Below this the figure is reported as an inequality. A p-value rounded to
+# 0.0 reads as exactly zero, and no test returns exactly zero.
+SMALLEST_REPORTED_P = 0.000001
+
+
+def _format_p(value: float | None) -> str:
+    """Render a p-value without ever claiming it is zero."""
+    if value is None:
+        return "—"
+    if value < SMALLEST_REPORTED_P:
+        return f"< {SMALLEST_REPORTED_P:g}"
+    return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
 def _table_to_dict(table: ContingencyTable) -> dict[str, Any]:

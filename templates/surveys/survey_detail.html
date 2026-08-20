@@ -4,66 +4,62 @@
 {% block title %}{{ survey.name }} — SurveyAnalytics{% endblock %}
 
 {% block content %}
-  <div class="page-head">
-    <div>
-      <p class="crumb"><a href="{% url 'surveys:list' %}">Surveys</a></p>
-      <h1>{{ survey.name }}</h1>
-      {% if survey.description %}<p class="lede">{{ survey.description }}</p>{% endif %}
+  <header class="entry-head">
+    <p class="entry-meta"><a href="{% url 'surveys:list' %}">Records</a><span>{{ survey.name }}</span></p>
+    <div class="entry-head__title">
+      <div>
+        <h1>{{ survey.name }}</h1>
+        {% if survey.description %}<p class="entry-head__lede">{{ survey.description }}</p>{% endif %}
+      </div>
+      <div class="actions">
+        <a class="btn btn--quiet btn--small" href="{% url 'surveys:delete' survey.pk %}">Delete survey</a>
+        <a class="btn btn--commit" href="{% url 'surveys:upload' survey.pk %}">Upload a new version</a>
+      </div>
     </div>
-    <div class="page-head__actions">
-      <a class="btn btn--ghost btn--danger" href="{% url 'surveys:delete' survey.pk %}">Delete survey</a>
-      <a class="btn" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a>
-    </div>
-  </div>
+  </header>
 
   {% if datasets %}
-    <h2>Uploads</h2>
-    <table class="data-table">
-      <caption class="visually-hidden">Datasets uploaded to this survey</caption>
-      <thead>
-        <tr>
-          <th scope="col">Version</th>
-          <th scope="col">File</th>
-          <th scope="col">Respondents</th>
-          <th scope="col">Questions</th>
-          <th scope="col">Uploaded</th>
-          <th scope="col">File</th>
-          <th scope="col"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for dataset in datasets %}
+    <div class="table-wrap">
+      <table>
+        <caption class="visually-hidden">Uploads recorded against this survey</caption>
+        <thead>
           <tr>
-            <th scope="row"><a href="{{ dataset.get_absolute_url }}">v{{ dataset.version }}</a></th>
-            <td>{{ dataset.source_filename }}</td>
-            <td>{{ dataset.respondent_count }}</td>
-            <td>{{ dataset.question_count }}</td>
-            <td>{{ dataset.uploaded_at|date:"j M Y, H:i" }}</td>
-            <td>
-              {% if dataset.source_file %}
-                <a href="{% url 'surveys:dataset_file' dataset.pk %}">Download</a>
-              {% else %}
-                —
-              {% endif %}
-            </td>
-            <td>
-              <a class="link-danger" href="{% url 'surveys:dataset_delete' dataset.pk %}">Delete</a>
-            </td>
+            <th scope="col">Version</th><th scope="col">File</th>
+            <th scope="col">Respondents</th><th scope="col">Questions</th>
+            <th scope="col">Uploaded</th><th scope="col">Original</th><th scope="col"></th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p class="card__note">
-      Each upload is kept as its own version. Earlier results stay valid for
-      the data they were computed from.
+        </thead>
+        <tbody>
+          {% for dataset in datasets %}
+            <tr>
+              <th scope="row" class="ledger__name">
+                <a href="{% url 'analytics:record' dataset.pk %}">Version {{ dataset.version }}</a>
+              </th>
+              <td class="cell-label">{{ dataset.source_filename }}</td>
+              <td class="num">{{ dataset.respondent_count }}</td>
+              <td class="num">{{ dataset.question_count }}</td>
+              <td class="num">{{ dataset.uploaded_at|date:"j M Y" }}</td>
+              <td>
+                {% if dataset.source_file %}
+                  <a href="{% url 'surveys:dataset_file' dataset.pk %}">Download</a>
+                {% else %}—{% endif %}
+              </td>
+              <td><a href="{% url 'surveys:dataset_delete' dataset.pk %}">Delete</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">
+      Each upload is kept as its own version. Results computed from an earlier
+      version stay valid for the data that produced them.
     </p>
   {% else %}
-    <section class="cat-panel">
-      <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
-           alt="A cat waiting for a file">
+    <section class="plate">
+      <img class="plate__art" src="{% static 'img/cat400.png' %}" alt="A cat waiting for a file">
       <h2>No responses yet</h2>
-      <p>Upload a CSV or Excel export to get started.</p>
-      <p><a class="btn" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a></p>
+      <p>Upload a CSV or Excel export to start the analysis.</p>
+      <p><a class="btn btn--commit" href="{% url 'surveys:upload' survey.pk %}">Upload responses</a></p>
     </section>
   {% endif %}
 {% endblock %}

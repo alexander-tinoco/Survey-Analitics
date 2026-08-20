@@ -85,6 +85,60 @@ class TestCrossTabulation:
         assert table.total == 3
 
 
+class TestScaleOrder:
+    def test_ordinal_answers_are_laid_out_in_scale_order(self) -> None:
+        """crosstab sorts labels alphabetically, which puts "Muy de acuerdo"
+        between "En desacuerdo" and "Neutral" — a table running in an order
+        nobody was asked the question in, hiding the diagonal that makes a
+        relationship visible at a glance.
+        """
+        scale = ["muy en desacuerdo", "en desacuerdo", "neutral", "de acuerdo", "muy de acuerdo"]
+        rows, columns = build(
+            {
+                ("Soporte", "Muy en desacuerdo"): 20,
+                ("Soporte", "En desacuerdo"): 10,
+                ("Ingeniería", "Muy de acuerdo"): 20,
+                ("Ingeniería", "De acuerdo"): 10,
+                ("Ventas", "Neutral"): 20,
+            }
+        )
+
+        table = cross_tabulate(rows, columns, column_scale=scale)
+
+        assert table.column_labels == [
+            "Muy en desacuerdo",
+            "En desacuerdo",
+            "Neutral",
+            "De acuerdo",
+            "Muy de acuerdo",
+        ]
+
+    def test_an_answer_outside_the_scale_is_kept_at_the_end(self) -> None:
+        """Dropping it would silently change the totals the table reports."""
+        rows, columns = build(
+            {("A", "Agree"): 20, ("A", "Not applicable"): 10, ("B", "Disagree"): 20}
+        )
+
+        table = cross_tabulate(rows, columns, column_scale=["disagree", "agree"])
+
+        assert table.column_labels == ["Disagree", "Agree", "Not applicable"]
+        assert table.total == 50
+
+    def test_analyze_threads_the_scales_through(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "Team": ["Soporte"] * 30 + ["Ingeniería"] * 30,
+                "Mood": ["Muy en desacuerdo"] * 30 + ["Muy de acuerdo"] * 30,
+            }
+        )
+        types = {"Team": "categorical", "Mood": "ordinal"}
+        scales = {"Mood": ["muy en desacuerdo", "neutral", "muy de acuerdo"]}
+
+        result = analyze(frame, types, scales)[0]
+
+        assert result.table.column_labels == ["Muy en desacuerdo", "Muy de acuerdo"]
+
+
 class TestChiSquare:
     def test_statistic_matches_the_hand_computed_value(self) -> None:
         """Table:

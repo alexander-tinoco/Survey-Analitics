@@ -1,43 +1,63 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Your surveys — SurveyAnalytics{% endblock %}
+{% block title %}Records — SurveyAnalytics{% endblock %}
 
 {% block content %}
-  <div class="page-head">
-    <h1>Your surveys</h1>
-    <a class="btn" href="{% url 'surveys:create' %}">New survey</a>
-  </div>
+  <header class="entry-head">
+    <div class="entry-head__title">
+      <div>
+        <h1>Records</h1>
+        <p class="entry-head__lede">Every survey you have analyzed, newest first.</p>
+      </div>
+      <a class="btn btn--commit" href="{% url 'surveys:create' %}">Start a record</a>
+    </div>
+  </header>
 
   {% if surveys %}
-    <ul class="card-list">
-      {% for survey in surveys %}
-        <li class="card">
-          <h2><a href="{{ survey.get_absolute_url }}">{{ survey.name }}</a></h2>
-          {% if survey.description %}<p class="card__note">{{ survey.description }}</p>{% endif %}
-          <p class="card__meta">
+    <div class="table-wrap">
+      <table class="ledger">
+        <caption class="visually-hidden">Your survey records</caption>
+        <thead>
+          <tr>
+            <th scope="col">Survey</th>
+            <th scope="col">Versions</th>
+            <th scope="col">Respondents</th>
+            <th scope="col">Questions</th>
+            <th scope="col">Last upload</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for survey in surveys %}
             {% with latest=survey.latest_dataset %}
-              {% if latest %}
-                v{{ latest.version }} ·
-                <span class="numeric">{{ latest.respondent_count }}</span> respondents ·
-                <span class="numeric">{{ latest.question_count }}</span> questions
-              {% else %}
-                No data uploaded yet
-              {% endif %}
+              <tr>
+                <th scope="row" class="ledger__name">
+                  <a href="{{ survey.get_absolute_url }}">{{ survey.name }}</a>
+                  {% if survey.description %}
+                    <span class="field__help">{{ survey.description }}</span>
+                  {% endif %}
+                </th>
+                <td class="num">{{ survey.datasets.count }}</td>
+                <td class="num">{% if latest %}{{ latest.respondent_count }}{% else %}—{% endif %}</td>
+                <td class="num">{% if latest %}{{ latest.question_count }}{% else %}—{% endif %}</td>
+                <td class="num">{% if latest %}{{ latest.uploaded_at|date:"j M Y" }}{% else %}—{% endif %}</td>
+              </tr>
             {% endwith %}
-          </p>
-        </li>
-      {% endfor %}
-    </ul>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% include "_pagination.html" %}
   {% else %}
-    {# Empty states are where the cats belong: nothing to analyze yet. #}
-    <section class="cat-panel">
-      <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+    <section class="plate">
+      <img class="plate__art" src="{% static 'img/cat400.png' %}"
            alt="A cat waiting for something to analyze">
-      <h2>Nothing to analyze yet</h2>
-      <p>Create a survey, upload its responses, and the analysis starts here.</p>
-      <p><a class="btn" href="{% url 'surveys:create' %}">Create your first survey</a></p>
+      <h2>Nothing recorded yet</h2>
+      <p>
+        Upload a survey export and the analysis starts here. Three sample files
+        ship with the repository if you want to see it work first.
+      </p>
+      <p><a class="btn btn--commit" href="{% url 'surveys:create' %}">Start a record</a></p>
     </section>
   {% endif %}
 {% endblock %}

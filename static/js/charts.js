@@ -20,19 +20,29 @@
 
   var summary = JSON.parse(payload.textContent);
 
-  // Pulled from the illustrations, same as the CSS. Ordinal scales get the
-  // single accent so the eye reads one shape; categorical answers get the
-  // ink ramp, since their order carries no meaning to reinforce.
-  var INK = "#0b0b0b";
-  var MINT_DEEP = "#1f6f63";
+  // The record's own ink, read from the stylesheet so a palette change in one
+  // place cannot leave the charts behind.
+  var styles = getComputedStyle(document.documentElement);
+  function token(name, fallback) {
+    return (styles.getPropertyValue(name) || "").trim() || fallback;
+  }
+
+  var INK = token("--ink", "#0b0f0e");
+  var RULE = token("--rule", "#d5ddd7");
+  var MUTED = token("--ink-soft", "#4a5551");
+
+  // An ordinal scale is one measurement along one axis, so its bars share a
+  // single ink and the shape carries the meaning. Categorical answers have no
+  // order to reinforce, so they step down a ramp instead.
+  var ORDINAL_INK = token("--stamp", "#1f6f63");
   var CATEGORICAL_RAMP = [
-    "#0b0b0b", "#1f6f63", "#3d3d3a", "#4a9d8f",
-    "#6b6b66", "#7fc4b6", "#9b9b95", "#b8f2e6"
+    "#0b0f0e", "#1f6f63", "#3c4a45", "#4a9d8f",
+    "#6b7671", "#7fc4b6", "#98a29d", "#b8f2e6"
   ];
 
   function colorsFor(distribution) {
     if (distribution.type === "ordinal") {
-      return MINT_DEEP;
+      return ORDINAL_INK;
     }
     return distribution.counts.map(function (_, index) {
       return CATEGORICAL_RAMP[index % CATEGORICAL_RAMP.length];
@@ -55,6 +65,8 @@
         tooltip: {
           backgroundColor: INK,
           padding: 10,
+          titleFont: { family: "Archivo, sans-serif" },
+          bodyFont: { family: "Roboto Mono, monospace" },
           displayColors: false,
           callbacks: {
             label: function (item) {
@@ -67,15 +79,15 @@
       scales: {
         x: {
           beginAtZero: true,
-          grid: { display: horizontal, color: "#e4e4de" },
+          grid: { display: horizontal, color: RULE },
           border: { display: false },
-          ticks: { precision: 0, color: "#6b6b66" }
+          ticks: { precision: 0, color: MUTED, font: { family: "Roboto Mono, monospace", size: 11 } }
         },
         y: {
           beginAtZero: true,
-          grid: { display: !horizontal, color: "#e4e4de" },
+          grid: { display: !horizontal, color: RULE },
           border: { display: false },
-          ticks: { precision: 0, color: "#6b6b66" }
+          ticks: { precision: 0, color: MUTED, font: { family: "Roboto Mono, monospace", size: 11 } }
         }
       }
     };
@@ -98,7 +110,7 @@
         datasets: [{
           data: distribution.counts.map(function (c) { return c.count; }),
           backgroundColor: colorsFor(distribution),
-          borderRadius: 4,
+          borderRadius: 1,
           maxBarThickness: 44
         }]
       },

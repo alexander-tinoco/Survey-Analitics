@@ -39,16 +39,18 @@ class TestAccessControl:
 
         assert response.status_code == 404
 
-    def test_another_users_dataset_is_not_reachable(
-        self, client: Client, survey: Survey, csv_file: bytes
+    def test_the_dataset_url_leads_to_its_record(
+        self, logged_in: Client, survey: Survey, csv_file: bytes
     ) -> None:
+        """A dataset's own page is its analysis record; the old URL only
+        keeps existing links alive.
+        """
         dataset = ingest(survey, parse_upload(csv_file, "survey.csv"))
-        intruder = User.objects.create_user(email="other@example.com", password="correct-horse")
-        client.force_login(intruder)
 
-        response = client.get(reverse("surveys:dataset_detail", args=[dataset.pk]))
+        response = logged_in.get(reverse("surveys:dataset_detail", args=[dataset.pk]))
 
-        assert response.status_code == 404
+        assert response.status_code == 302
+        assert response.url == reverse("analytics:record", args=[dataset.pk])
 
     def test_uploading_to_another_users_survey_is_refused(
         self, client: Client, survey: Survey, csv_file: bytes
@@ -68,23 +70,53 @@ class TestAccessControl:
 class TestSurveyList:
     def test_empty_state_shows_a_cat(self, logged_in: Client) -> None:
         """Empty states are where the illustrations belong."""
-        response = logged_in.get(reverse("surveys:list"))
+        content = logged_in.get(reverse("surveys:list")).content.decode()
 
-        assert response.status_code == 200
-        assert "Nothing to analyze yet" in response.content.decode()
-        assert "img/cat400.png" in response.content.decode()
+        assert "Nothing recorded yet" in content
+        assert "img/cat400.png" in content
 
     def test_listing_shows_the_users_surveys(self, logged_in: Client, survey: Survey) -> None:
         response = logged_in.get(reverse("surveys:list"))
 
         assert survey.name in response.content.decode()
 
-    def test_creating_a_survey_assigns_the_current_owner(self, logged_in: Client) -> None:
-        """Owner comes from the session, never from submitted data."""
-        logged_in.post(reverse("surveys:create"), {"name": "Client survey", "description": ""})
+    def test_starting_a_record_creates_survey_and_dataset_together(
+        self, logged_in: Client, csv_file: bytes
+    ) -> None:
+        """One step, not two: an empty survey has no meaning, so the old split
+        cost a screen and taught a container concept before it paid off.
+        """
+        response = logged_in.post(
+            reverse("surveys:create"),
+            {
+                "name": "Client survey",
+                "description": "",
+                "file": SimpleUploadedFile("survey.csv", csv_file, content_type="text/csv"),
+            },
+        )
 
         created = Survey.objects.get(name="Client survey")
+        # Owner comes from the session, never from submitted data.
         assert created.owner.email == "owner@example.com"
+        assert created.datasets.count() == 1
+        assert response.url == reverse("analytics:record", args=[created.datasets.first().pk])
+
+    def test_a_rejected_file_leaves_no_empty_survey_behind(self, logged_in: Client) -> None:
+        """Parsing runs before the survey is created, so a bad upload cannot
+        strand a record the user then has to find and delete.
+        """
+        response = logged_in.post(
+            reverse("surveys:create"),
+            {
+                "name": "Doomed survey",
+                "description": "",
+                "file": SimpleUploadedFile("survey.csv", b"Age,Age\n34,35\n"),
+            },
+        )
+
+        assert response.status_code == 200
+        assert "appears more than once" in response.content.decode()
+        assert not Survey.objects.filter(name="Doomed survey").exists()
 
 
 class TestUpload:
@@ -137,37 +169,18 @@ class TestUpload:
         assert Dataset.objects.count() == 0
 
 
-class TestDatasetDetail:
-    def test_shows_the_inferred_questions_and_counts(
+class TestVersionHistory:
+    def test_the_survey_lists_its_uploads(
         self, logged_in: Client, survey: Survey, csv_file: bytes
     ) -> None:
         dataset = ingest(survey, parse_upload(csv_file, "survey.csv"))
 
-        content = logged_in.get(
-            reverse("surveys:dataset_detail", args=[dataset.pk])
-        ).content.decode()
+        content = logged_in.get(reverse("surveys:detail", args=[survey.pk])).content.decode()
 
-        assert "Satisfaction" in content
-        assert "Ordinal" in content
-        assert "Free text" in content
+        assert "survey.csv" in content
+        assert f"Version {dataset.version}" in content
 
-    def test_data_views_carry_no_cats(
-        self, logged_in: Client, survey: Survey, csv_file: bytes
-    ) -> None:
-        """The design rule, enforced: illustrations stay out of data views.
-
-        A cat next to a chi-square result undercuts the number it sits beside.
-        """
-        dataset = ingest(survey, parse_upload(csv_file, "survey.csv"))
-
-        content = logged_in.get(
-            reverse("surveys:dataset_detail", args=[dataset.pk])
-        ).content.decode()
-
-        assert "cat-panel__art" not in content
-        assert "img/cat404.png" not in content
-
-    def test_version_history_lists_every_upload(
+    def test_every_upload_is_listed(
         self, logged_in: Client, survey: Survey, csv_file: bytes
     ) -> None:
         ingest(survey, parse_upload(csv_file, "first.csv"))
@@ -177,5 +190,5 @@ class TestDatasetDetail:
 
         assert "first.csv" in content
         assert "second.csv" in content
-        assert "v1" in content
-        assert "v2" in content
+        assert "Version 1" in content
+        assert "Version 2" in content

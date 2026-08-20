@@ -1,32 +1,22 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block shell_modifier %} shell--narrow{% endblock %}
 {% block title %}Delete version {{ dataset.version }}?{% endblock %}
 
 {% block content %}
-  <section class="cat-panel">
-    <img class="cat-panel__art" src="{% static 'img/cat400.png' %}"
+  <section class="plate">
+    <img class="plate__art" src="{% static 'img/cat400.png' %}"
          alt="A cat asking whether you are sure">
     <h1>Delete version {{ dataset.version }}?</h1>
+    <p>This removes <strong>{{ dataset.source_filename }}</strong> — <span class="num">{{ dataset.respondent_count }}</span> respondents across <span class="num">{{ dataset.question_count }}</span> questions — and any analysis computed from it. Other versions of “{{ dataset.survey.name }}” are unaffected.</p>
+    <p><strong class="strike">This cannot be undone.</strong></p>
 
-    <p>
-      This removes <strong>{{ dataset.source_filename }}</strong> —
-      <span class="numeric">{{ dataset.respondent_count }}</span> respondents
-      across <span class="numeric">{{ dataset.question_count }}</span> questions —
-      and any analysis computed from it. Other versions of
-      “{{ dataset.survey.name }}” are unaffected.
-    </p>
-    <p><strong>This cannot be undone.</strong></p>
-
-    <form method="post" class="cat-panel__card">
+    <form class="sheet" method="post">
       {% csrf_token %}
-      <button class="btn btn--block btn--danger" type="submit">
-        Yes, delete this version
-      </button>
+      <button class="btn btn--commit btn--block" type="submit">Delete this version</button>
     </form>
 
-    <p class="cat-panel__hint">
-      <a href="{{ dataset.get_absolute_url }}">Keep it, take me back</a>
-    </p>
+    <p class="plate__aside"><a href="{% url 'analytics:record' dataset.pk %}">Keep it, take me back</a></p>
   </section>
 {% endblock %}

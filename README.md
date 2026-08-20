@@ -53,11 +53,45 @@ cd Survey-Analitics
 cp .env.example .env      # development defaults, safe to use as-is
 make build
 make migrate
+make demo                 # optional: a demo account with the samples loaded
 make up
 ```
 
 The application is then at <http://localhost:8000>, with a health check at
-<http://localhost:8000/health/>.
+<http://localhost:8000/health/>. Set `WEB_PORT` in `.env` if that port is taken.
+
+### Signing in
+
+`make demo` creates an account and loads all three sample files, so the
+analysis is there to read on the first page you open:
+
+| | |
+| --- | --- |
+| Email | `demo@example.com` |
+| Password | `gato-analitico-99` |
+
+These are development credentials in a local container with no data worth
+protecting. They are printed here on purpose so the project can be evaluated
+without a signup, and they must not survive a real deployment: `DJANGO_DEBUG`
+is off in production settings and the account is created by an opt-in command,
+never by a migration.
+
+Without `make demo`, create your own account at `/accounts/register/` and start
+a record with one of the sample files below.
+
+### Sample data
+
+Three exports ship in [`samples/`](samples/), each demonstrating a different
+outcome:
+
+| File | What it shows |
+| --- | --- |
+| `01-clear-relationship.csv` | 200 respondents with a genuine relationship between department and satisfaction, plus a coffee-preference column constructed to be unrelated. The unrelated pair is correctly rejected. |
+| `02-distinct-groups.csv` | 240 respondents in three planted profiles, answering **Spanish** Likert scales — the ordinal ordering is recognized in both languages. |
+| `03-no-findings.csv` | 60 respondents of random answers. Produces **no findings at all**, and says so. |
+
+The third is the one worth uploading first. Any tool can print a number; the
+question is what it does when there is nothing to report.
 
 ## How it works
 

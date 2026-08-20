@@ -9,14 +9,13 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import (
-    CreateView,
     DeleteView,
     DetailView,
     FormView,
     ListView,
 )
 
-from .forms import DatasetUploadForm, SurveyForm
+from .forms import DatasetUploadForm, StartRecordForm
 from .models import Dataset, Survey
 from .services.ingestion import ingest
 from .services.parsing import ParseError, parse_upload
@@ -55,14 +54,39 @@ class SurveyListView(OwnedByUserMixin, ListView):
         )
 
 
-class SurveyCreateView(LoginRequiredMixin, CreateView):
-    model = Survey
-    form_class = SurveyForm
-    template_name = "surveys/survey_form.html"
+class StartRecordView(LoginRequiredMixin, FormView):
+    """Name a record and ingest its responses in one step.
 
-    def form_valid(self, form: SurveyForm) -> HttpResponse:
-        form.instance.owner = self.request.user
-        return super().form_valid(form)
+    Parsing runs before the survey is created, so a rejected file leaves
+    nothing behind: the old two-step flow could strand an empty survey the
+    user then had to find and delete.
+    """
+
+    form_class = StartRecordForm
+    template_name = "surveys/start_record.html"
+
+    def form_valid(self, form: StartRecordForm) -> HttpResponse:
+        uploaded = form.cleaned_data["file"]
+
+        try:
+            parsed = parse_upload(uploaded.read(), uploaded.name)
+        except ParseError as exc:
+            # The parser writes for the uploader, who can fix a stray
+            # delimiter; the message is surfaced as written.
+            form.add_error("file", str(exc))
+            return self.form_invalid(form)
+
+        survey = form.save(commit=False)
+        survey.owner = self.request.user
+        survey.save()
+
+        dataset = ingest(survey, parsed)
+        messages.success(
+            self.request,
+            f"Recorded {dataset.respondent_count} respondents across "
+            f"{dataset.question_count} questions.",
+        )
+        return redirect("analytics:record", pk=dataset.pk)
 
 
 class SurveyDetailView(OwnedByUserMixin, DetailView):
@@ -126,10 +150,10 @@ class DatasetUploadView(LoginRequiredMixin, FormView):
         dataset = ingest(self.survey, parsed)
         messages.success(
             self.request,
-            f"Ingested {dataset.respondent_count} respondents "
-            f"across {dataset.question_count} questions.",
+            f"Recorded version {dataset.version}: {dataset.respondent_count} "
+            f"respondents across {dataset.question_count} questions.",
         )
-        return redirect(dataset)
+        return redirect("analytics:record", pk=dataset.pk)
 
 
 class DatasetDeleteView(LoginRequiredMixin, DeleteView):
@@ -174,20 +198,3 @@ class DatasetFileView(LoginRequiredMixin, DetailView):
             as_attachment=True,
             filename=dataset.source_filename,
         )
-
-
-class DatasetDetailView(LoginRequiredMixin, DetailView):
-    model = Dataset
-    template_name = "surveys/dataset_detail.html"
-    context_object_name = "dataset"
-
-    def get_queryset(self) -> QuerySet:
-        return Dataset.objects.filter(survey__owner=self.request.user).select_related("survey")
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        # Questions are already ordered and counted at ingestion, so listing
-        # them costs one query rather than one aggregate per row.
-        context["questions"] = self.object.questions.all()
-        context["analyzable_count"] = sum(1 for q in context["questions"] if q.is_analyzable)
-        return context

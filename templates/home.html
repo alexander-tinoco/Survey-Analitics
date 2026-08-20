@@ -1,24 +1,94 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}SurveyAnalytics — insights from survey data{% endblock %}
+{% block title %}SurveyAnalytics — the analysis after the percentages{% endblock %}
 
 {% block content %}
-  <section class="hero">
+  <section class="opening">
     <div>
       <h1>Your survey tool stopped at percentages.</h1>
-      <p class="hero__lede">
-        Upload your response data and get the analysis that comes next:
-        which answers travel together, which respondents form a group, and
-        which questions split the room — written out in plain language.
+      <p class="opening__lede">
+        Upload the responses and this reads them the way an analyst would:
+        which answers travel together, which respondents form a group, which
+        questions split the room. Written out in sentences you can put in front
+        of a committee.
       </p>
-      {% if user.is_authenticated %}
-        <a class="btn" href="{% url 'surveys:list' %}">Go to your surveys</a>
-      {% else %}
-        <a class="btn" href="{% url 'accounts:register' %}">Start analyzing</a>
-      {% endif %}
+      <div class="actions">
+        {% if user.is_authenticated %}
+          <a class="btn btn--commit" href="{% url 'surveys:create' %}">Start a record</a>
+          <a class="btn" href="{% url 'surveys:list' %}">Your records</a>
+        {% else %}
+          <a class="btn btn--commit" href="{% url 'accounts:register' %}">Start a record</a>
+          <a class="btn" href="{% url 'accounts:login' %}">Sign in</a>
+        {% endif %}
+      </div>
     </div>
-    <img class="hero__art" src="{% static 'img/catHomePage.png' %}"
+    <img class="opening__art" src="{% static 'img/catHomePage.png' %}"
          alt="A cat playing an electric guitar">
+  </section>
+
+  {% comment %}
+    The output itself, set exactly as the record sets it. A screenshot would
+    age; this is the real component, so it cannot drift from the product.
+  {% endcomment %}
+  <section class="specimen">
+    <p class="specimen__caption">What a finding looks like · real output, 200 respondents</p>
+    <p class="specimen__claim">
+      67.3% of respondents who answered “Engineering” to “Department” also
+      answered “Agree” to “Satisfaction” — against 33.5% across everyone.
+    </p>
+    <div class="finding__evidence">
+      <dl>
+        <div><dt>Respondents</dt><dd>200</dd></div>
+        <div><dt>Cramér's V</dt><dd>0.348</dd></div>
+        <div><dt>Adjusted p</dt><dd>&lt; 0.00001</dd></div>
+        <div><dt>Assumptions</dt><dd><span class="stamp stamp--recorded">Met</span></dd></div>
+      </dl>
+    </div>
+    <p class="table-note" style="margin-top: 1rem;">
+      Every sentence carries the figures behind it, and the table that produced
+      it is one click away.
+    </p>
+  </section>
+
+  <h2>Three questions, answered in order</h2>
+  <ol class="ledger-steps">
+    <li>
+      <h3>How did people answer?</h3>
+      <p>
+        Distributions, participation, and the questions people skipped —
+        because a result computed from half the room should say so.
+      </p>
+    </li>
+    <li>
+      <h3>What goes with what?</h3>
+      <p>
+        Every pair of questions cross-tabulated, ranked by how strong the
+        relationship is rather than by how large the sample was.
+      </p>
+    </li>
+    <li>
+      <h3>Who resembles whom?</h3>
+      <p>
+        Respondent profiles, and which questions divide the room into camps
+        rather than merely leaving it undecided.
+      </p>
+    </li>
+  </ol>
+
+  <section class="specimen">
+    <p class="specimen__caption">The harder half</p>
+    <p class="specimen__claim">
+      On 30 respondents of random answers, this reports nothing at all.
+    </p>
+    <p>
+      A chi-square returns a plausible number for any two columns, and most
+      tools print it. A finding is withheld here unless it clears its own
+      statistical assumptions, survives correction for the number of
+      comparisons made, and covers enough respondents to describe someone.
+    </p>
+    <p class="table-note">
+      Nothing found is a result, and it is written down as one.
+    </p>
   </section>
 {% endblock %}

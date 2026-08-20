@@ -2,17 +2,16 @@
 {% load static %}
 
 {% block shell_modifier %} shell--narrow{% endblock %}
-{% block title %}Upload responses — {{ survey.name }}{% endblock %}
+{% block title %}Start a record — SurveyAnalytics{% endblock %}
 
 {% block content %}
   <header class="entry-head">
-    <p class="entry-meta">
-      <a href="{% url 'surveys:list' %}">Records</a>
-      <a href="{{ survey.get_absolute_url }}">{{ survey.name }}</a>
-      <span>New version</span>
+    <p class="entry-meta"><a href="{% url 'surveys:list' %}">Records</a><span>New</span></p>
+    <h1>Start a record</h1>
+    <p class="entry-head__lede">
+      Name it and give it the responses. The analysis begins the moment the
+      file is read.
     </p>
-    <h1>Upload responses</h1>
-    <p class="entry-head__lede">A new version of {{ survey.name }}. Nothing is overwritten.</p>
   </header>
 
   <form class="sheet" method="post" enctype="multipart/form-data">
@@ -25,4 +24,10 @@
     {% for field in form %}{% include "_form_field.html" %}{% endfor %}
     <button class="btn btn--commit btn--block" type="submit">Read the file</button>
   </form>
+
+  <p class="plate__aside">
+    No file to hand? The repository ships three sample exports in
+    <code>samples/</code> — one with a real relationship, one with distinct
+    groups, and one of random answers that should produce no findings at all.
+  </p>
 {% endblock %}

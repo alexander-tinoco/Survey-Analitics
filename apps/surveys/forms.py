@@ -24,6 +24,36 @@ class SurveyForm(forms.ModelForm):
         }
 
 
+class StartRecordForm(forms.ModelForm):
+    """Name a record and give it its responses in one step.
+
+    These used to be two screens: create an empty survey, then find it again
+    and upload to it. Nothing happens in between — the survey has no meaning
+    until it holds data — so the split cost the user a screen and taught them
+    a container concept before it could pay off.
+    """
+
+    file = forms.FileField(
+        label="Response file",
+        help_text="CSV or Excel. One row per respondent, one column per question.",
+    )
+
+    class Meta:
+        model = Survey
+        fields = ["name", "description"]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={"autofocus": True, "placeholder": "Employee survey 2026"}
+            ),
+            "description": forms.Textarea(
+                attrs={"rows": 2, "placeholder": "Optional. What this survey asked, and of whom."}
+            ),
+        }
+
+    def clean_file(self) -> object:
+        return _validate_upload(self.cleaned_data["file"])
+
+
 class DatasetUploadForm(forms.Form):
     """Accept a response export.
 
@@ -37,13 +67,20 @@ class DatasetUploadForm(forms.Form):
     )
 
     def clean_file(self) -> object:
-        uploaded = self.cleaned_data["file"]
+        return _validate_upload(self.cleaned_data["file"])
 
-        if not uploaded.name.lower().endswith(ALLOWED_EXTENSIONS):
-            raise forms.ValidationError("Upload a .csv, .xlsx or .xls file.")
 
-        if uploaded.size > MAX_UPLOAD_BYTES:
-            limit_mb = MAX_UPLOAD_BYTES // (1024 * 1024)
-            raise forms.ValidationError(f"That file is larger than {limit_mb} MB.")
+def _validate_upload(uploaded: object) -> object:
+    """Reject an obviously wrong file before the parser ever reads it.
 
-        return uploaded
+    Shared by both upload paths so a file refused on one screen is refused
+    identically on the other.
+    """
+    if not uploaded.name.lower().endswith(ALLOWED_EXTENSIONS):
+        raise forms.ValidationError("Upload a .csv, .xlsx or .xls file.")
+
+    if uploaded.size > MAX_UPLOAD_BYTES:
+        limit_mb = MAX_UPLOAD_BYTES // (1024 * 1024)
+        raise forms.ValidationError(f"That file is larger than {limit_mb} MB.")
+
+    return uploaded
