@@ -18,7 +18,11 @@ from apps.surveys.services.ingestion import ingest
 from apps.surveys.services.parsing import parse_upload
 
 DEMO_EMAIL = "demo@example.com"
-DEMO_PASSWORD = "gato-analitico-99"
+# Deliberately hardcoded and published in the README, so the project can be
+# evaluated without a signup. The rule flagging it is right in general, which is
+# why the exemption is stated here rather than widened in the linter config:
+# the guard below is what keeps this out of a real database.
+DEMO_PASSWORD = "gato-analitico-99"  # noqa: S105
 
 SAMPLES = [
     ("01-clear-relationship.csv", "Employee engagement 2026"),
@@ -64,6 +68,4 @@ class Command(BaseCommand):
                 f"{dataset.question_count} questions"
             )
 
-        self.stdout.write(
-            self.style.SUCCESS(f"\nSign in as {DEMO_EMAIL} / {DEMO_PASSWORD}")
-        )
+        self.stdout.write(self.style.SUCCESS(f"\nSign in as {DEMO_EMAIL} / {DEMO_PASSWORD}"))
