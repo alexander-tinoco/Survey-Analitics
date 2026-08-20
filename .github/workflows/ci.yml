@@ -1,0 +1,94 @@
+# Continuous integration.
+#
+# The same commands the Jenkinsfile runs, on GitHub's runners: a badge and a
+# check on every push, without depending on a Jenkins server being switched on.
+# Services run alongside the job instead of through docker compose, because the
+# runner is already the container.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: surveyanalytics
+          POSTGRES_USER: surveyanalytics
+          POSTGRES_PASSWORD: surveyanalytics
+        ports: ["5432:5432"]
+        # The job waits for a database that can answer queries, not merely one
+        # whose port is open.
+        options: >-
+          --health-cmd "pg_isready -U surveyanalytics"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DJANGO_SECRET_KEY: ci-only-key-not-used-anywhere-else
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DATABASE_URL: postgres://surveyanalytics:surveyanalytics@localhost:5432/surveyanalytics
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements/dev.txt
+
+      - name: Lint
+        run: |
+          ruff check --output-format=github .
+          ruff format --check .
+
+      - name: Test
+        # pytest carries the 85% coverage gate from pyproject.toml, so a drop
+        # below the threshold fails here.
+        run: pytest
+
+      - name: Analytics engine coverage
+        # The engine is held to 100% separately: it is pure and fast to test,
+        # and an untested branch there returns a plausible wrong number rather
+        # than crashing. -o addopts="" clears the project-wide --cov=. that
+        # would otherwise be added to this one rather than replacing it.
+        run: |
+          pytest tests/analytics -o addopts="" \
+            --cov=apps/analytics/engine \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the application image
+        # The image ships the code, so a build failure here is a deployment
+        # failure caught before anyone deploys.
+        run: docker build -t surveyanalytics:ci .

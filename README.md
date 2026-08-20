@@ -1,117 +1,125 @@
-<h1 align="center">SurveyAnalytics</h1>
+# SurveyAnalytics · Survey analysis that knows when to stay quiet
 
 <p align="center">
-  <img src="static/img/catHomePage.png" alt="Cat playing a guitar" width="180">
+  <img src="static/img/catHomePage.png" alt="A cat playing an electric guitar" width="150">
 </p>
 
-<p align="center">
-  <em>Survey tools stop at counts and percentages. This one starts there.</em>
-</p>
+A survey closes and the institution is left with a CSV export. Their tool told
+them **68% chose "Agree"** and stopped there. Nobody can answer the questions
+that actually matter: *which respondents who chose X also chose Y?*, *are there
+distinct profiles among the people who answered?*, *which questions divide the
+room?*
+
+This repository is the analysis that comes after the percentages — and, just as
+importantly, **the refusal to report one when the data does not support it.**
 
 ---
 
-## What it does
+## Project status
 
-Upload survey response data and get analysis, not another bar chart. The engine
-runs three layers over the responses and states what it finds in plain language:
+| Indicator | Status |
+|---|---|
+| **Continuous integration** | [![CI](https://github.com/alexander-tinoco/Survey-Analitics/actions/workflows/ci.yml/badge.svg)](https://github.com/alexander-tinoco/Survey-Analitics/actions/workflows/ci.yml) |
+| **License** | [![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) |
+| **Tests** | **383**, of which **211** cover the analysis engine alone |
+| **Coverage** | **98.6%** overall · **100%** on `apps/analytics/engine/`, enforced as its own CI stage |
+| **Routes** | 34 across HTML pages and a versioned `/api/v1/` |
+| **Pipeline** | GitHub Actions · a Jenkinsfile that runs the same commands ([docs/CI.md](docs/CI.md)) |
+| **Governance** | Conventional Commits · SSH-signed · [ADRs](docs/adr/) · [ROADMAP](docs/ROADMAP.md) |
 
-| Layer | Answers |
-| --- | --- |
-| **Descriptive** | How did people answer? Distributions, participation, missing data. |
-| **Relational** | What goes with what? Contingency tables, chi-square, segment comparison. |
-| **Pattern** | Who resembles whom? Respondent clusters, polarized vs. consensus questions. |
+---
 
-The output is a sentence a non-statistician can read, backed by the numbers that
-produced it. Real output, from a 200-respondent dataset:
+## The problem, concretely
 
-> 67.3% of respondents who answered "Engineering" to "Department" also answered
-> "Agree" to "Satisfaction" — against 33.5% across everyone.
+What a survey tool gives you, and what this does instead:
 
-And on 30 respondents of random answers, the same engine reports **nothing at
-all**. That is the harder half: a chi-square returns a plausible number for any
-two columns, so findings are withheld unless they clear their own statistical
-assumptions, survive correction for the number of comparisons made, and cover
-enough respondents to describe someone.
+| | A survey tool's results tab | This |
+|---|---|---|
+| **Per question** | Counts and a bar chart | Distributions, participation, and which question people avoided |
+| **Between questions** | Nothing | Every pair cross-tabulated, ranked by strength of relationship |
+| **Between respondents** | Nothing | Profiles, described by the answers that set them apart |
+| **The output** | Charts you interpret yourself | Sentences, with the figures behind each one |
+| **On weak data** | The same confident chart | **Nothing, and it says why** |
+| **Ordinal scales** | Alphabetical | In scale order — recognized in English *and* Spanish |
+| **Re-uploading** | Overwrites the old results | A new version; earlier results stay valid for their data |
 
-Building surveys is deliberately **out of scope**. Google Forms does that well.
-The gap is on the analysis side, and that is the entire product.
+Against the included sample of 200 respondents, it reports:
 
-## Stack
+> **50.6%** of respondents who answered "Ingeniería" to "Departamento" also
+> answered "Muy de acuerdo" to "Estoy satisfecho con mi puesto" — against
+> **16.7%** across everyone.
 
-Django · Django REST Framework · PostgreSQL · pandas · scipy · scikit-learn ·
-Celery · Redis · HTMX · Chart.js · pytest · Docker · Jenkins
+Against 60 respondents of random answers, it reports **nothing at all**, and
+says so. That second behaviour is the harder one to build and the reason the
+first can be trusted.
 
-## Getting started
+---
 
-Requires Docker and Docker Compose. Nothing else — Python and Postgres run in
-containers.
+## Architecture
 
-```bash
-git clone git@github.com:alexander-tinoco/Survey-Analitics.git
-cd Survey-Analitics
+```mermaid
+graph TB
+    subgraph Entrada["Ingestion"]
+        CSV[["CSV / XLSX export"]]
+        PA[parsing<br/>delimiter · encoding · validation]
+        IN[inference<br/>categorical · ordinal · numeric · text]
+        IG[ingestion<br/>atomic, batched write]
+        CSV --> PA --> IN --> IG
+    end
 
-cp .env.example .env      # development defaults, safe to use as-is
-make build
-make migrate
-make demo                 # optional: a demo account with the samples loaded
-make up
+    subgraph Motor["Analysis engine · pure Python"]
+        DE[descriptive<br/>distributions · participation]
+        RE[relational<br/>chi-square · Cramér's V · FDR]
+        PT[patterns<br/>k-means vs permutation null]
+        IS[insights<br/>statistics → sentences]
+        DE --> IS
+        RE --> IS
+        PT --> IS
+    end
+
+    subgraph Servicios["Service layer · Django-aware"]
+        FR[frames<br/>ORM ↔ DataFrame]
+        JB[jobs<br/>cache · atomic lock]
+        RC[record<br/>one dataset, one read]
+    end
+
+    subgraph Datos["Persistence"]
+        PG[("PostgreSQL 16<br/>long-format responses")]
+        RD[("Redis 7<br/>results + locks")]
+    end
+
+    subgraph Async["Background"]
+        CW[Celery worker]
+    end
+
+    subgraph Cliente["Interface · server-rendered"]
+        UI[Django templates<br/>+ Chart.js]
+        API[DRF · /api/v1/<br/>JWT + session]
+    end
+
+    IG -->|"long format"| PG
+    PG --> FR
+    FR --> DE
+    FR --> RE
+    FR --> PT
+    JB <-->|"key: dataset id + engine version"| RD
+    JB -->|"enqueue"| CW
+    CW --> RE
+    CW --> PT
+    RC --> JB
+    RC --> UI
+    RC --> API
+
+    style Motor fill:#f4f6f3,stroke:#1f6f63,stroke-width:2px
 ```
 
-The application is then at <http://localhost:8000>, with a health check at
-<http://localhost:8000/health/>. Set `WEB_PORT` in `.env` if that port is taken.
+The **engine imports no Django**. Not the ORM, not settings, not the framework
+at all — only pandas, scipy and scikit-learn. A DataFrame goes in, a frozen
+dataclass comes out, and it performs no I/O
+([ADR 0001](docs/adr/0001-framework-agnostic-analytics-engine.md)).
 
-### Signing in
-
-`make demo` creates an account and loads all three sample files, so the
-analysis is there to read on the first page you open:
-
-| | |
-| --- | --- |
-| Email | `demo@example.com` |
-| Password | `gato-analitico-99` |
-
-These are development credentials in a local container with no data worth
-protecting. They are printed here on purpose so the project can be evaluated
-without a signup, and they must not survive a real deployment: `DJANGO_DEBUG`
-is off in production settings and the account is created by an opt-in command,
-never by a migration.
-
-Without `make demo`, create your own account at `/accounts/register/` and start
-a record with one of the sample files below.
-
-### Sample data
-
-Three exports ship in [`samples/`](samples/), each demonstrating a different
-outcome:
-
-| File | What it shows |
-| --- | --- |
-| `01-clear-relationship.csv` | 200 respondents with a genuine relationship between department and satisfaction, plus a coffee-preference column constructed to be unrelated. The unrelated pair is correctly rejected. |
-| `02-distinct-groups.csv` | 240 respondents in three planted profiles, answering **Spanish** Likert scales — the ordinal ordering is recognized in both languages. |
-| `03-no-findings.csv` | 60 respondents of random answers. Produces **no findings at all**, and says so. |
-
-The third is the one worth uploading first. Any tool can print a number; the
-question is what it does when there is nothing to report.
-
-## How it works
-
-### The decision everything hangs on
-
-```
-views / tasks   →   services/   →   engine/
-   (Django)      (Django+pandas)   (pure Python)
-```
-
-`engine/` does not import Django. Not the ORM, not settings, not the
-framework at all — only pandas, scipy and scikit-learn. A DataFrame goes in, a
-frozen dataclass comes out. It performs no I/O: no files, no database, no
-cache. The reasoning is recorded in
-[ADR 0001](docs/adr/0001-framework-agnostic-analytics-engine.md).
-
-The payoff is what a test of a statistical function looks like. Without the
-separation, checking a chi-square means creating two hundred rows in a
-database, and the setup obscures what is being asserted. With it, the case is
-a literal:
+That is not tidiness. It is what makes a statistical test checkable against a
+number computed by hand:
 
 ```python
 rows, columns = build({("Unsatisfied", "Low"): 40, ("Satisfied", "High"): 45})
@@ -119,301 +127,447 @@ result = associate("Satisfaction", "Support", rows, columns)
 assert result.chi_square == pytest.approx(5.3333)
 ```
 
-The descriptive engine's tests run in about a second with no database. That is
-what makes a 100% coverage requirement on `engine/` reasonable rather than
-performative: reaching it is cheap.
+The engine's 211 tests run without a database. That is why a 100% coverage
+requirement on it is reasonable rather than performative: reaching it is cheap.
 
-A rule stated in a document erodes, so a test walks the `engine/` package with
-`ast` and fails the build if any module imports `django`, `rest_framework`,
-`celery` or `apps`. The guard itself was verified by temporarily adding such an
-import and watching it fail — a guard that has never failed is not known to
-work.
+A test walks the engine package with `ast` and fails the build if any module
+imports a framework. It was verified by temporarily adding such an import and
+watching it fail — a guard that has never failed is not known to work.
 
-### How responses are stored
+---
 
-An export arrives **wide**: one row per person, one column per question, and
-every survey has different columns. Storing that shape directly makes the
-database schema depend on the uploaded file. Two alternatives were rejected:
+## Data model
+
+A survey export arrives **wide**: one row per person, one column per question,
+and every survey has different columns. Storing that shape directly makes the
+database schema depend on the uploaded file.
+
+```mermaid
+erDiagram
+    users ||--o{ surveys : owns
+    surveys ||--o{ datasets : "versioned by"
+    datasets ||--o{ questions : "declares"
+    datasets ||--o{ responses : "holds"
+    questions ||--o{ responses : "answered by"
+
+    users {
+        int id PK
+        text email UK "the login identifier"
+        text display_name
+        text password "bcrypt"
+        bool is_active "deactivate, never delete: preserves datasets"
+    }
+
+    surveys {
+        int id PK
+        int owner_id FK
+        text name UK "unique per owner"
+        text description
+        timestamp created_at
+    }
+
+    datasets {
+        int id PK
+        int survey_id FK
+        int version UK "unique per survey, never reused"
+        text source_filename
+        file source_file "the upload itself, kept"
+        int respondent_count
+        int question_count
+        timestamp uploaded_at "immutable after ingestion"
+    }
+
+    questions {
+        int id PK
+        int dataset_id FK
+        int position UK "column order in the source file"
+        text text
+        enum type "categorical | ordinal | numeric | free_text"
+        int distinct_values "cached at ingestion"
+        int missing_count
+    }
+
+    responses {
+        int id PK
+        int dataset_id FK
+        int question_id FK
+        text respondent_key "identity within a dataset, not a user"
+        text raw_value "exactly what the file contained"
+        text normalized_value "whitespace collapsed, case preserved"
+        float numeric_value "the number, or the rank on its scale"
+        bool is_missing "absence is data, not an absent row"
+    }
+```
+
+Three alternatives were weighed and two rejected
+([ADR 0002](docs/adr/0002-long-format-response-storage.md)):
 
 | Approach | Why not |
-| --- | --- |
+|---|---|
 | A wide table per dataset | Requires creating tables at runtime; migrations stop meaning anything |
-| A JSON blob per respondent | Every question becomes an unindexed key, so filtering by one answer scans every row, and the database cannot enforce that an answer refers to a question that exists |
+| A JSON blob per respondent | Every question becomes an unindexed key, and the database cannot enforce that an answer refers to a question that exists |
 | **Long format** ✅ | One fixed schema serves every survey |
 
-So responses are stored **long** — one row per (respondent, question):
+The cost is real — `respondents × questions` rows — but adding a question to
+next year's wave becomes an `INSERT` rather than a migration.
 
-```
-Survey ──< Dataset (versioned) ──< Question
-                 │                     │
-                 └──────< Response >───┘
-```
+**Datasets are immutable and versioned**, and that single decision is what makes
+the analytics cache safe: re-uploading produces a *new* id, so a key containing
+that id can never serve results computed from data the user has replaced. There
+is no invalidation step to forget.
 
-The cost is real: `respondents × questions` rows, so a 240-person,
-4-question upload is 960 rows. In exchange, adding a question to next year's
-wave is an `INSERT` rather than a migration. Full reasoning in
-[ADR 0002](docs/adr/0002-long-format-response-storage.md).
+---
 
-Datasets are **immutable and versioned**. Re-uploading creates a new version
-rather than modifying the old one, which is what makes the analytics cache
-safe — see below.
+## Statistical honesty
 
-### The ingestion pipeline
+This is what defines the project. A chi-square returns a plausible number for
+any two columns, and most tools print it.
 
-```
-uploaded bytes
-   ↓  parsing.py  (pure)
-detect delimiter → decode → read → clean → validate
-   ↓  wide DataFrame
-   ↓  inference.py  (pure)
-infer each column's type
-   ↓  question profiles
-   ↓  ingestion.py  (touches the ORM)
-create Dataset → create Questions → flatten to Responses
-```
+### Three guards, built into the engine rather than left to the reader
 
-**Parsing** picks the delimiter by counting occurrences in the header row
-among four candidates (`, ; \t |`). It works that way because of a real bug:
-letting pandas sniff freely (`sep=None`) split the one-column header `Rating`
-on the letter `t`. It then drops empty rows and columns, strips the `Unnamed: 0`
-index column that appears when someone saved a DataFrame with its index, and
-refuses files that are empty, header-only, over 500 columns, over 100,000 rows,
-or that repeat a header — pandas silently renames duplicates to `Age`/`Age.1`,
-which would show the user a question they never wrote.
-
-**Inference** classifies each column, and the classification decides which
-statistical tests are valid. A chi-square over free text returns a number, and
-that number is noise.
-
-| Type | How it is recognized |
-| --- | --- |
-| `numeric` | ≥80% of values parse as numbers, and the range does not look like a scale |
-| `ordinal` | Matches a known rating scale (English or Spanish), or whole numbers anchored at 0/1 with a single-digit ceiling |
-| `categorical` | Few distinct options, short answers |
-| `free_text` | Mostly unique values, or long answers |
-
-The numeric/ordinal rule was rewritten after a bug: five ages
-`34, 29, 45, 38, 52` are five distinct whole numbers, and the first version
-turned them into ranks 1-5, destroying the real ages. The rule is not *how
-many* values there are but *where they sit* — a rating scale is anchored at 0
-or 1 and tops out in single digits.
-
-**Ingestion** is the only part that touches the ORM. It is `@transaction.atomic`
-because a half-ingested dataset would report a respondent count its rows do not
-support, and every later analysis would quietly compute against incomplete
-data. Rows are written with `bulk_create` in batches of 2,000.
-
-Each response keeps four things:
+**1 · Expected-count validity (Cochran's rule).** Chi-square approximates a
+distribution that only holds when expected cell counts are large enough. Below
+that, the p-value does not mean what it appears to. The result is shown, but
+never reported as significant — no matter how small its p-value.
 
 ```python
-raw_value         # exactly what the file contained
-normalized_value  # whitespace collapsed, case preserved
-numeric_value     # the number, or the rank on its scale
-is_missing        # flag
+if not self.is_reliable:
+    return False   # never significant, however small the p
 ```
 
-`raw_value` is kept so that a parser bug can be fixed by re-deriving the other
-fields, rather than by asking the user to upload again. The original file is
-kept for the same reason, one level up. Missing answers are stored as rows
-rather than omitted: drop them and the response count stops agreeing with the
-respondent count, which makes participation rate uncomputable. An absence is
-data.
+**2 · Effect size beside significance.** With enough respondents, a trivial
+association becomes "significant". Cramér's V runs 0–1 independently of sample
+size, and is what results are ranked by. It is reported in words —
+*negligible · weak · moderate · strong* — because "V = 0.21" tells a reader
+nothing.
 
-### The four analysis layers
+**3 · Correction for multiple comparisons.** Twenty questions make 190 pairs; at
+p < 0.05 roughly ten look significant by chance alone. Benjamini-Hochberg
+corrects across the whole family. FDR rather than Bonferroni, because this is
+exploratory analysis, where missing a real pattern costs more than one false
+lead.
 
-**Descriptive** — distributions, response rates, numeric summaries. Runs
-inline, since it is cheap. Ordinal answers keep their scale order, because a
-satisfaction chart sorted by frequency reads as noise while the same bars in
-scale order read as a shape. Mean and median are both shown, with a flag when
-they diverge by more than a fifth of a standard deviation — that gap is
-exactly when quoting the mean alone misleads.
+### The clustering problem, and the null it is tested against
 
-**Relational** — contingency tables, chi-square, Cramér's V. Runs on a worker,
-because it is quadratic: 30 questions is 435 tests. Three guards are built in,
-since chi-square returns a plausible number for any two columns:
+k-means *always* returns clusters. Give it pure noise and it hands back six tidy
+groups with labels. A test written to assert "noise produces no groups" **failed
+on the first run**: random categorical answers reached a silhouette of 0.30,
+twice the threshold that looked reasonable — because one-hot encoding places
+respondents on the vertices of a hypercube, where genuine *geometric* separation
+exists without any *population* structure.
 
-1. **Expected-count validity** (Cochran's rule). Below it the approximation
-   does not hold, so the result is shown but never reported as significant, no
-   matter how small its p-value.
-2. **Effect size beside significance.** With enough respondents a trivial
-   association becomes "significant"; Cramér's V is independent of sample size
-   and is what results are ranked by.
-3. **Benjamini-Hochberg correction.** Twenty questions make 190 pairs, of which
-   roughly ten look significant by chance. FDR rather than Bonferroni, because
-   this is exploration, where missing a real pattern costs more than one false
-   lead.
-
-**Patterns** — k-means clustering and polarization. The hardest part, because
-k-means *always* returns clusters: give it pure noise and it hands back six
-tidy groups with labels. Random categorical answers reach a silhouette around
-0.30, since one-hot encoding places respondents on the vertices of a hypercube
-where genuine *geometric* separation exists without any *population* structure.
-
-A fixed threshold cannot tell those apart, so the observed score is compared
-against the same data with **each question's answers shuffled independently** —
+A fixed threshold cannot tell those apart. So the observed score is compared
+against the same data with **each question's answers shuffled independently**,
 which destroys every relationship between questions while preserving each
-question's own distribution. Structure has to beat that, not merely exist:
+question's own distribution:
 
-| Dataset | Null | Observed | Verdict |
-| --- | --- | --- | --- |
+| Dataset | Null (max) | Observed | Verdict |
+|---|---|---|---|
 | Pure noise | 0.3134 | 0.3009 | **rejected** |
-| Real structure | 0.6207 | 0.7664 | accepted |
+| Real structure with noise | 0.6207 | 0.7664 | accepted |
+| Cleanly planted groups | 0.7085 | 1.0 | accepted |
 
-Polarization is kept distinct from disagreement. Answers spread evenly across a
-scale describe a population that has not settled; answers piled at both ends
-and avoiding the middle describe one split into camps. Only the second is
-called polarized.
+The null scales with each dataset's own shape. A constant cannot.
 
-**Insights** — the layer the product exists for. It reads the output of the
-other three and states what it means, without recomputing anything, so a
-sentence can never disagree with the table beside it. Every insight carries the
-figures it was built from, and tests parse the numbers back out of the
-generated text to check they match. Nothing that failed its assumptions,
-survives only before correction, or covers too few respondents produces a
-sentence at all.
+### Polarized is not the same as divided
 
-### Background work and caching
+Answers spread evenly across a scale describe a population that **has not
+settled**. Answers piled at both ends and avoiding the middle describe one
+**split into camps**. Only the second is called polarized — calling the first
+one polarized would invent a conflict that is not there.
 
-```
-browser              web              redis            worker
-   │ GET /findings/
-   ├───────────────►│ cached?
-   │                ├───────────────►│ no
-   │                │ cache.add(lock) ──atomic──►│
-   │                ├──────── queue job ─────────────────►│
-   │◄─── 202 ───────┤                                      │ computes
-   │ poll 2s → 15s  │                          ◄─ store ───┤
-   ├───────────────►│ cached? yes              ◄─ unlock ──┤
-   │◄─── 200 ───────┤
-```
+---
 
-The cache key contains the dataset id:
+## The interface
 
-```python
-f"analytics:relational:v1:dataset:{dataset_id}"
-```
+The world is a **bound laboratory notebook** rather than a dashboard, chosen for
+one reason: a dashboard has no way to render *"nothing was found"* as anything
+but an empty state, and this product withholds findings often enough that its
+refusal has to look like a result ([DESIGN.md](DESIGN.md)).
 
-That is safe because of the storage decision above. Datasets are immutable, so
-re-uploading produces a *new* id and the old key is simply never read again.
-**There is no invalidation step to forget** — the classic cache bug cannot
-occur by construction. The `v1` covers the other case: when the statistics
-change, cached results are wrong even though the data did not change.
+| Landing | Signing in |
+| :---: | :---: |
+| ![Landing](docs/images/01-landing.png) | ![Sign in](docs/images/02-sign-in.png) |
 
-The lock uses `cache.add`, which is atomic in Redis, so two simultaneous
-visitors cannot queue the same job twice. It is released only *after* the
-result is stored, and also on failure, so a dead job never leaves a dataset
-looking permanently busy.
+The landing shows the product's actual output, rendered by the same components
+the record uses — so it cannot drift from the real thing.
 
-The API answers `202` while working and `200` when ready. A `200` with an empty
-list would read as "finished and found nothing" — indistinguishable from a real
-result.
+![Refused sign-in](docs/images/03-sign-in-refused.png)
 
-## What it does not do
+The message does not distinguish "no such account" from "wrong password".
+Distinguishing them turns the login form into an oracle for which email
+addresses are registered.
 
-Refuses to report a relationship whose expected cell counts are too small for
-chi-square to mean anything. Refuses to call respondents a "segment" unless the
-grouping beats one produced by shuffling the same answers at random. Refuses to
-report a p-value without the effect size beside it. Each refusal is enforced by
-a test, because the tempting failure in this domain is not a crash — it is a
-confident sentence about noise.
+| Your records | Starting one |
+| :---: | :---: |
+| ![Records](docs/images/04-records.png) | ![Start a record](docs/images/05-start-record.png) |
 
-## Known limitations
+Naming a survey and uploading its responses is **one step**. Parsing runs before
+the survey is created, so a rejected file cannot strand an empty record the user
+then has to find and delete.
 
-Stated rather than discovered later.
+### One record, not four pages
 
-- **Everything fits in memory.** The engine assumes its input frame fits in
-  RAM. The 100,000-row ingestion cap keeps that safe at survey scale, but this
-  is not a tool for larger data.
-- **Clustering oversegments.** On a synthetic set with three planted profiles
-  it recovers four — the extra one is a reasonable subdivision, not noise, but
-  it is more than were planted. Per-question weighting, a parsimony rule and
-  deduplicating identical descriptions each reduced it; the remainder is
-  inherent to k-means on categorical answers. Tuning further would fit the test
-  fixture rather than the problem, so every profile is instead shown with the
-  answers that define it, for the reader to judge.
-- **Generated sentences are English templates.** Ordinal scales and
-  non-answers are recognized in Spanish, but the findings themselves are not
-  translated, and the phrasings are fixed.
-- **No rate limiting.** Nothing stops a user from queueing many uploads at
-  once and saturating the worker.
-- **Free-text answers are stored but never analyzed.** No topic extraction or
-  sentiment — they are excluded from every test on purpose, since a
-  cross-tabulation of prose is meaningless.
-- **The 500 page reuses the 400 illustration.** No dedicated cat exists for it
-  yet.
+![Findings](docs/images/06-record-findings.png)
 
-## Common tasks
+Findings, distributions, relationships and groups live at one URL, with a margin
+index that marks the section being read. The first finding is set at headline
+scale and the rest recede; the entry header states which record you are inside.
+
+![Evidence](docs/images/07-evidence.png)
+
+Every sentence carries the figures it was built from. Tests parse the numbers
+back out of the generated text and compare them to the stored evidence — a claim
+the reader cannot check is a claim they should not trust.
+
+| Distributions | Relationships |
+| :---: | :---: |
+| ![Distributions](docs/images/08-distributions.png) | ![Relationships](docs/images/09-relationships.png) |
+
+Every chart has a table beside it with the same numbers: a canvas is opaque to a
+screen reader. Contingency percentages are shares **of each row**, so rows can
+be compared even when they hold different numbers of respondents.
+
+![Groups](docs/images/10-groups.png)
+
+A profile is only reported if it can be *described* — a cluster that holds
+together in the encoded space but has no answer setting it apart is not a
+finding.
+
+### When there is nothing to report
+
+![Nothing stands out](docs/images/11-nothing-stands-out.png)
+
+The index reads `FINDINGS 0 · RELATIONSHIPS 0 · GROUPS 0`, and the page states
+it as a result rather than greying out. This is the sample file of random
+answers, and it is the screen worth looking at first.
+
+<p align="center">
+  <img src="docs/images/12-mobile-record.png" alt="The record on a phone" width="300">
+</p>
+
+---
+
+## Running it
+
+Requires Docker and Docker Compose. Python and PostgreSQL run in containers.
 
 ```bash
-make help        # list every target
-make test        # pytest with coverage
-make lint        # ruff check + format check
-make format      # apply fixes
-make shell          # shell inside the web container
-make worker-reload  # restart Celery after editing a task
+git clone git@github.com:alexander-tinoco/Survey-Analitics.git
+cd Survey-Analitics
+
+cp .env.example .env      # development defaults, safe as-is
+make build
+make migrate
+make demo                 # demo account with the three samples loaded
+make up
+```
+
+The application is at <http://localhost:8000>, with a health check at
+`/health/`. Set `WEB_PORT` in `.env` if that port is taken.
+
+### Credentials
+
+`make demo` creates an account and loads all three sample files, so there is
+analysis to read on the first page you open:
+
+| | |
+|---|---|
+| **Email** | `demo@example.com` |
+| **Password** | `gato-analitico-99` |
+
+These are development credentials, in a local container, holding synthetic data.
+They are published here so the project can be evaluated without a signup, and
+they cannot reach production: `load_demo` refuses to run with `DEBUG` off, and
+no migration creates them.
+
+### Sample data
+
+Three exports ship in [`samples/`](samples/), each demonstrating a different
+outcome:
+
+| File | Respondents | What it shows |
+|---|---|---|
+| `01-clear-relationship.csv` | 200 | A genuine relationship between department and satisfaction, plus a coffee-preference column constructed to be unrelated — which is correctly rejected |
+| `02-distinct-groups.csv` | 240 | Three planted profiles answering **Spanish** Likert scales |
+| `03-no-findings.csv` | 60 | Random answers. Produces **no findings at all** |
+
+Upload the third one first.
+
+### Common commands
+
+```bash
+make help           # every target
+make test           # pytest with the 85% gate
+make test-engine    # the engine at its stricter 100% gate
+make lint           # ruff check + format check
 make worker-logs    # follow the Celery worker
-make test-engine    # analytics engine at its stricter 100% gate
-make ci-up          # start the local Jenkins server (see docs/CI.md)
-make clean          # stop the stack and drop the database volume
+make worker-reload  # Celery does not hot-reload; restart after editing a task
+make ci-up          # a local Jenkins server (docs/CI.md)
+make clean          # stop everything and drop the database volume
 ```
 
-## Project layout
+---
 
+## Repository layout
+
+```text
+Survey-Analitics/
+├── docker-compose.yml           → Self-contained stack (what CI builds)
+├── docker-compose.override.yml  → Adds the dev bind mount, loaded automatically
+├── Jenkinsfile                  → Pipeline as code
+├── Makefile                     → The same commands CI runs
+├── pyproject.toml               → ruff, pytest and coverage configuration
+│
+├── config/                      → Project configuration
+│   ├── settings/                → base · local · production
+│   ├── celery.py                → Celery application
+│   ├── error_views.py           → 400 / 403 / 404 / 500, keeping real status codes
+│   └── views.py                 → Health check that verifies the database
+│
+├── apps/
+│   ├── accounts/                → Custom user model, JWT and session auth
+│   ├── surveys/                 → INGESTION
+│   │   ├── models.py            → Survey · Dataset · Question · Response
+│   │   ├── services/
+│   │   │   ├── parsing.py       → PURE: bytes → DataFrame
+│   │   │   ├── inference.py     → PURE: column → question type
+│   │   │   └── ingestion.py     → The only part that touches the ORM
+│   │   └── management/commands/ → load_demo
+│   │
+│   └── analytics/
+│       ├── engine/              → NO DJANGO IMPORTS (ADR 0001)
+│       │   ├── descriptive.py   → Distributions, participation, numeric summaries
+│       │   ├── relational.py    → Contingency, chi-square, Cramér's V, FDR
+│       │   ├── patterns.py      → Clustering vs a permutation null, polarization
+│       │   └── insights.py      → Statistics → sentences
+│       ├── services/
+│       │   ├── frames.py        → ORM ↔ DataFrame, long → wide
+│       │   ├── jobs.py          → Cache, atomic lock, job status
+│       │   └── record.py        → One dataset, read once
+│       ├── tasks.py             → Celery jobs
+│       └── exports.py           → CSV and JSON rendering of findings
+│
+├── templates/                   → Server-rendered pages
+├── static/
+│   ├── css/record.css           → The whole design system
+│   ├── js/record.js             → Index scroll-spy
+│   ├── fonts/                   → Self-hosted Archivo and Roboto Mono
+│   └── img/                     → The cat illustrations
+├── samples/                     → Three demonstration exports
+├── tests/                       → 383 tests, mirroring the apps
+└── docs/
+    ├── adr/                     → Architecture decision records
+    ├── ROADMAP.md               → Milestones and their commits
+    ├── CI.md                    → The pipeline, and running Jenkins locally
+    └── images/                  → Interface screenshots
 ```
-config/              Project configuration
-  settings/          base / local / production
-  celery.py          Celery application
-  error_views.py     400 / 403 / 404 / 500 handlers
-apps/
-  accounts/          Custom user model, JWT and session auth
-  surveys/           Ingestion: models, parsing, type inference
-    services/        parsing.py and inference.py are pure; ingestion.py is not
-  analytics/
-    engine/          Pure Python statistics — no Django imports (ADR 0001)
-      descriptive.py   distributions, response rates, numeric summaries
-      relational.py    contingency tables, chi-square, Cramér's V, FDR
-      patterns.py      clustering with a permutation null, polarization
-      insights.py      statistics → sentences
-    services/        ORM ↔ DataFrame translation, caching, job control
-    tasks.py         Celery jobs
-    exports.py       CSV and JSON rendering of findings
-docs/
-  ROADMAP.md         Milestones and their commits
-  CI.md              Pipeline, and running Jenkins locally
-  adr/               Architecture decision records
-static/
-  css/cats.css       Design tokens and every component
-  js/charts.js       Chart.js rendering
-  js/vendor/         Vendored third-party assets
-  img/               Cat illustrations, served as Django static files
-templates/           Server-rendered pages
-tests/               Test suite, mirroring the apps
+
+---
+
+## Background work and caching
+
+Cross-tabulating every pair of questions is quadratic: a 30-question survey is
+435 chi-square tests. It runs on a Celery worker, and the result is cached.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant W as Web
+    participant R as Redis
+    participant C as Celery worker
+
+    B->>W: GET the record
+    W->>R: cached?
+    R-->>W: no
+    W->>R: cache.add(lock) — atomic
+    W->>C: enqueue job
+    W-->>B: 202 · sections marked "computing"
+    C->>C: analyze
+    C->>R: store result
+    C->>R: release lock (only now)
+    B->>W: poll (2s → 15s backoff)
+    W->>R: cached?
+    R-->>W: yes
+    W-->>B: 200 · page reloads
 ```
 
-## Documentation
+- The key carries the **dataset id and an engine version**. The id makes stale
+  results impossible; the version covers the other case, where the data is
+  unchanged but the statistics are not.
+- The lock uses `cache.add`, atomic in Redis, so two simultaneous visitors
+  cannot queue the same job twice.
+- It is released **only after** the result is stored, and also on failure, so a
+  dead job never leaves a dataset looking permanently busy.
+- `202` while working, `200` when ready. A `200` with an empty list would read
+  as "finished, found nothing" — indistinguishable from a real result.
 
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — what is built and what comes next
-- [`docs/adr/`](docs/adr/) — why the architecture looks the way it does
-- [`docs/CI.md`](docs/CI.md) — the pipeline, and how to run Jenkins locally
-- [`CLAUDE.md`](CLAUDE.md) — engineering standards and workflow for this repository
+---
 
-## Testing
+## API
+
+Versioned under `/api/v1/`, authenticated with JWT or the session cookie the
+pages already carry.
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/api/v1/auth/register/` | Create an account |
+| `POST` | `/api/v1/auth/login/` | Obtain an access/refresh pair |
+| `POST` | `/api/v1/auth/refresh/` | Rotate the pair; the used token is blacklisted |
+| `POST` | `/api/v1/auth/logout/` | Blacklist the refresh token |
+| `GET` | `/api/v1/auth/me/` | The authenticated user |
+| `GET` | `/api/v1/analytics/datasets/<id>/descriptive/` | Distributions and participation |
+| `GET` | `/api/v1/analytics/datasets/<id>/relational/` | Associations · `202` while computing |
+| `GET` | `/api/v1/analytics/datasets/<id>/patterns/` | Groups and polarization · `202` while computing |
+| `GET` | `/api/v1/analytics/datasets/<id>/insights/` | The findings · `202` until every layer is ready |
+
+Access tokens live 15 minutes; refresh tokens rotate and the used one is
+blacklisted, so a stolen refresh token fails on replay rather than granting a
+parallel session.
+
+Findings also export as **CSV or JSON** from the record, carrying the evidence
+behind each sentence — an exported claim without its figures cannot be checked
+once it has left the application. Exporting is refused while a layer is still
+computing: a file is read later, with no sign that it was partial when written.
+
+---
+
+## Environment variables
+
+```ini
+DJANGO_SETTINGS_MODULE=config.settings.local
+DJANGO_SECRET_KEY=...          # no default: a misconfigured deploy fails at boot
+DJANGO_DEBUG=True              # defaults to False; the insecure mode is never accidental
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+POSTGRES_DB=surveyanalytics
+POSTGRES_USER=surveyanalytics
+POSTGRES_PASSWORD=surveyanalytics
+DATABASE_URL=postgres://surveyanalytics:surveyanalytics@db:5432/surveyanalytics
+
+REDIS_URL=redis://redis:6379/0 # cache and Celery broker
+
+WEB_PORT=8000                  # host port, in case 8000 is taken
+JENKINS_PORT=8080              # only for the optional local CI server
+```
+
+`production.py` additionally forces HTTPS redirects, secure cookies, HSTS for a
+year, `X-Frame-Options: DENY` and MIME-sniffing protection. Those settings only
+take effect on a deployed instance — which means a mistake in them is invisible
+during development — so **they have their own tests**, asserting each guarantee
+with a docstring naming the attack it prevents.
+
+---
+
+## Quality
 
 ```bash
-make test
+make test           # 383 tests, 85% floor
+make test-engine    # the engine alone, 100% floor
 ```
 
-```bash
-make test           # whole suite, 85% floor
-make test-engine    # analytics engine only, 100% floor
-```
-
-The project-wide floor is 85%. The analytics engine is held to **100%**,
-enforced as its own CI stage, because it is pure and fast to test and an
-untested branch there returns a plausible wrong number rather than crashing.
-
-Statistical functions are tested against expected values computed by hand and
-written into the docstring:
+Statistical functions are tested against values computed by hand and written
+into the docstring:
 
 ```python
 def test_statistic_matches_the_hand_computed_value(self):
@@ -423,18 +577,69 @@ def test_statistic_matches_the_hand_computed_value(self):
         A2     30   20  |   50
         total  40   40  |   80
 
-    chi2 = (10-15)^2/15 + (20-15)^2/15 + (30-25)^2/25 + (20-25)^2/25
+    chi2 = (10-15)²/15 + (20-15)²/15 + (30-25)²/25 + (20-25)²/25
          = 1.6667 + 1.6667 + 1 + 1 = 5.3333
     """
 ```
 
-Deriving the expected value with the same library the code uses would only
-prove pandas agrees with itself — a wrong formula would pass. Written by hand,
-it fails.
+Deriving the expected value with the same library the code uses would only prove
+pandas agrees with itself — a wrong formula would pass. Written by hand, it
+fails.
 
-There are more lines of test than of application code, which is deliberate for
-a project whose failure mode is not a crash but a confident wrong answer.
+There are more lines of test than of application code (4,822 vs 4,643), which is
+deliberate for a project whose failure mode is not a crash but a confident wrong
+answer.
+
+Both pipelines run lint, the full suite, and the engine's stricter gate.
+[`docs/CI.md`](docs/CI.md) records what running the Jenkins pipeline for the
+first time turned up — including two application bugs that local development
+could not reveal, one of them a container that could not write inside its own
+working directory.
+
+---
+
+## Architecture decisions
+
+| ADR | Decision |
+|---|---|
+| [0001](docs/adr/0001-framework-agnostic-analytics-engine.md) | The analytics engine imports no framework |
+| [0002](docs/adr/0002-long-format-response-storage.md) | Responses are stored long, in immutable versioned datasets |
+
+Records are immutable: a decision that stops being true is superseded by a new
+ADR that links back, never edited. The reasoning is the asset — "why we did not
+do X" is what stops someone reintroducing X.
+
+---
+
+## Known limitations
+
+What this explicitly does **not** do today:
+
+- **No public deployment.** The stack is defined and runs locally; there is no
+  hosted environment, so the screenshots above are the only way to see it
+  without cloning.
+- **Everything fits in memory.** Ingestion is capped at 100,000 rows and 500
+  columns. Safe at survey scale, not a tool for larger data.
+- **Clustering oversegments.** Three planted profiles come back as four.
+  Per-question weighting, a parsimony rule and deduplicating identical
+  descriptions each reduced it; the remainder is inherent to k-means on
+  categorical answers. Every profile is therefore shown with the answers that
+  define it, for the reader to judge.
+- **Generated findings are English templates.** Ordinal scales and non-answers
+  are recognized in Spanish, but the sentences are not translated — so a Spanish
+  survey produces a bilingual finding. This is the most visible rough edge left.
+- **Free text is stored but never analyzed.** No topic extraction, no sentiment.
+  It is excluded from every statistical test on purpose: a cross-tabulation of
+  prose is meaningless.
+- **No rate limiting**, and no scheduled retention.
+- **The 500 page reuses the 400 illustration.** No dedicated cat exists for it.
+
+---
 
 ## License
 
-Not yet licensed.
+[MIT](LICENSE) · Alexander Tinoco
+
+Every figure in the screenshots, tests and documentation comes from synthetic
+data generated by the scripts in [`samples/`](samples/). No real survey response
+has ever been part of this repository.
